@@ -11,6 +11,7 @@
 
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
+import { DASHBOARD_COOKIE, verifySessionToken } from '@/lib/dashboard-auth';
 
 /**
  * Generates a cryptographically secure nonce for CSP
@@ -22,7 +23,26 @@ function generateNonce(): string {
   return btoa(String.fromCharCode(...array));
 }
 
-export function proxy(request: NextRequest) {
+export async function proxy(request: NextRequest) {
+  const { pathname } = request.nextUrl;
+
+  // Researcher dashboard: shared-password gate. The login page and its POST
+  // endpoint (/api/dashboard/login, excluded from this matcher) stay open so
+  // an unauthenticated researcher can sign in. Everything else under
+  // /dashboard requires a valid session cookie. Fails closed: with no
+  // DASHBOARD_PASSWORD configured, the dashboard is simply unreachable.
+  if (pathname.startsWith('/dashboard') && pathname !== '/dashboard/login') {
+    const secret = process.env.DASHBOARD_PASSWORD;
+    const token = request.cookies.get(DASHBOARD_COOKIE)?.value;
+    const authed = secret ? await verifySessionToken(token, secret) : false;
+    if (!authed) {
+      const loginUrl = request.nextUrl.clone();
+      loginUrl.pathname = '/dashboard/login';
+      loginUrl.search = '';
+      return NextResponse.redirect(loginUrl);
+    }
+  }
+
   const isDev = process.env.NODE_ENV === 'development';
   const nonce = generateNonce();
 
