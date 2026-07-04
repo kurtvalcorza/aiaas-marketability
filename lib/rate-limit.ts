@@ -7,6 +7,8 @@ import {
   MAX_REQUESTS_PER_WINDOW,
   SUBMISSION_RATE_LIMIT_WINDOW,
   MAX_SUBMISSIONS_PER_WINDOW,
+  LOGIN_RATE_LIMIT_WINDOW,
+  MAX_LOGIN_ATTEMPTS_PER_WINDOW,
 } from './constants';
 import { RateLimitRecord, RateLimitResult } from './types';
 
@@ -171,6 +173,7 @@ async function createRateLimiter(
 // Singleton instances
 let chatRateLimiter: InMemoryRateLimiter | VercelKVRateLimiter | null = null;
 let submissionRateLimiter: InMemoryRateLimiter | VercelKVRateLimiter | null = null;
+let loginRateLimiter: InMemoryRateLimiter | VercelKVRateLimiter | null = null;
 
 /**
  * Gets or creates the chat rate limiter instance
@@ -192,6 +195,18 @@ async function getSubmissionRateLimiter(): Promise<
     submissionRateLimiter = await createRateLimiter(SUBMISSION_RATE_LIMIT_WINDOW);
   }
   return submissionRateLimiter;
+}
+
+/**
+ * Gets or creates the login rate limiter instance
+ */
+async function getLoginRateLimiter(): Promise<
+  InMemoryRateLimiter | VercelKVRateLimiter
+> {
+  if (!loginRateLimiter) {
+    loginRateLimiter = await createRateLimiter(LOGIN_RATE_LIMIT_WINDOW);
+  }
+  return loginRateLimiter;
 }
 
 /**
@@ -228,6 +243,17 @@ export async function checkSubmissionRateLimit(req: Request): Promise<RateLimitR
 }
 
 /**
+ * Checks rate limit for dashboard login attempts (brute-force guard)
+ * @param req - The incoming request
+ * @returns Rate limit result
+ */
+export async function checkLoginRateLimit(req: Request): Promise<RateLimitResult> {
+  const key = getRateLimitKey(req);
+  const limiter = await getLoginRateLimiter();
+  return limiter.check(key, MAX_LOGIN_ATTEMPTS_PER_WINDOW);
+}
+
+/**
  * Cleanup function for graceful shutdown
  */
 export function cleanupRateLimiters(): void {
@@ -238,5 +264,9 @@ export function cleanupRateLimiters(): void {
   if (submissionRateLimiter) {
     submissionRateLimiter.cleanup();
     submissionRateLimiter = null;
+  }
+  if (loginRateLimiter) {
+    loginRateLimiter.cleanup();
+    loginRateLimiter = null;
   }
 }

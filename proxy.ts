@@ -11,6 +11,7 @@
 
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
+import { DASHBOARD_COOKIE, requireDashboardSession } from '@/lib/dashboard-auth';
 
 /**
  * Generates a cryptographically secure nonce for CSP
@@ -22,7 +23,25 @@ function generateNonce(): string {
   return btoa(String.fromCharCode(...array));
 }
 
-export function proxy(request: NextRequest) {
+export async function proxy(request: NextRequest) {
+  const { pathname } = request.nextUrl;
+
+  // Researcher dashboard: shared-password gate. The login page and its POST
+  // endpoint (/api/dashboard/login, excluded from this matcher) stay open so
+  // an unauthenticated researcher can sign in. Everything else under
+  // /dashboard requires a valid session cookie. Fails closed: with no
+  // DASHBOARD_PASSWORD configured, the dashboard is simply unreachable.
+  if (pathname.startsWith('/dashboard') && pathname !== '/dashboard/login') {
+    const token = request.cookies.get(DASHBOARD_COOKIE)?.value;
+    const authed = await requireDashboardSession(token);
+    if (!authed) {
+      const loginUrl = request.nextUrl.clone();
+      loginUrl.pathname = '/dashboard/login';
+      loginUrl.search = '';
+      return NextResponse.redirect(loginUrl);
+    }
+  }
+
   const isDev = process.env.NODE_ENV === 'development';
   const nonce = generateNonce();
 
@@ -88,7 +107,16 @@ export function proxy(request: NextRequest) {
 export const config = {
   matcher: [
     /*
-     * Match all request paths except for the ones starting with:
+     * Dashboard routes are ALWAYS run through the middleware — no `missing`
+     * prefetch exclusion. The auth gate lives in proxy(); a client-settable
+     * `Next-Router-Prefetch` / `Purpose: prefetch` header must NOT be able to
+     * skip it. (The page also re-checks the session as defense in depth.)
+     */
+    '/dashboard',
+    '/dashboard/:path*',
+    /*
+     * Everything else only gets security headers, so it's safe (and cheaper)
+     * to skip on prefetch. Match all request paths except:
      * - api (API routes)
      * - _next/static (static files)
      * - _next/image (image optimization files)
