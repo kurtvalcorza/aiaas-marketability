@@ -32,8 +32,8 @@ This project follows a professional code of conduct. Please be respectful and co
 1. Fork the repository
 2. Clone your fork:
    ```bash
-   git clone https://github.com/YOUR_USERNAME/aiaas-marketability-chatbot.git
-   cd aiaas-marketability-chatbot
+   git clone https://github.com/YOUR_USERNAME/aiaas-marketability.git
+   cd aiaas-marketability
    ```
 
 3. Install dependencies:

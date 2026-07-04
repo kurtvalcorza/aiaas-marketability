@@ -20,7 +20,7 @@
 
 ## Overview
 
-The **AIaaS Demand Viability Index (DVI) Chatbot** (`aiaas-marketability-chatbot`) is a Next.js application that runs a two-phase **marketability and demand-validation instrument** ("form + reconciling chat") for a localized AI repository and AI-as-a-Service (AIaaS) platform under the DOST-NAIRA project. A structured form collects routing, tag selections, adoption intent, and the four **0.0–5.0 component self-ratings**; a short chat then handles the one open-ended question, contradiction reconciliation, any Advanced-Demand follow-up, and the visible summary. The app routes the respondent through the RR/DD matrix with an AI-maturity overlay, gathers competitor-friction and value-proposition evidence, and computes a study-specific **Demand Viability Index (DVI)**.
+The **AIaaS Demand Viability Index (DVI) Chatbot** (`aiaas-marketability`) is a Next.js application that runs a two-phase **marketability and demand-validation instrument** ("form + reconciling chat") for a localized AI repository and AI-as-a-Service (AIaaS) platform under the DOST-NAIRA project. A structured form collects routing, tag selections, adoption intent, and the four **0.0–5.0 component self-ratings**; a short chat then handles the one open-ended question, contradiction reconciliation, any Advanced-Demand follow-up, and the visible summary. The app routes the respondent through the RR/DD matrix with an AI-maturity overlay, gathers competitor-friction and value-proposition evidence, and computes a study-specific **Demand Viability Index (DVI)**.
 
 **The app owns all structured data and all scoring; the language model never computes or assigns a score.** The four DVI components are the respondent's own self-ratings from the form.
 
@@ -202,7 +202,7 @@ The refactoring was done incrementally without breaking changes:
 ## Folder Structure
 
 ```
-aiaas-marketability-chatbot/
+aiaas-marketability/
 ├── app/                          # Next.js App Router
 │   ├── api/                      # API routes
 │   │   ├── chat/                 # Interview streaming endpoint

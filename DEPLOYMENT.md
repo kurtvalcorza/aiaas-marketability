@@ -91,7 +91,7 @@ function doPost(e) {
    git add .
    git commit -m "Initial commit"
    git branch -M main
-   git remote add origin https://github.com/YOUR_USERNAME/aiaas-marketability-chatbot.git
+   git remote add origin https://github.com/YOUR_USERNAME/aiaas-marketability.git
    git push -u origin main
    ```
 2. Go to https://vercel.com/new and import the repository.

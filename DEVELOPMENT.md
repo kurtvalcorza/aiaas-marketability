@@ -14,7 +14,7 @@ never scores**. It is built on the `ai-readiness-assessment` template but is
 ## Project Structure
 
 ```
-aiaas-marketability-chatbot/
+aiaas-marketability/
 ├── app/
 │   ├── api/
 │   │   ├── chat/         # Chat API endpoint with AI streaming
