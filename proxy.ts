@@ -107,7 +107,16 @@ export async function proxy(request: NextRequest) {
 export const config = {
   matcher: [
     /*
-     * Match all request paths except for the ones starting with:
+     * Dashboard routes are ALWAYS run through the middleware — no `missing`
+     * prefetch exclusion. The auth gate lives in proxy(); a client-settable
+     * `Next-Router-Prefetch` / `Purpose: prefetch` header must NOT be able to
+     * skip it. (The page also re-checks the session as defense in depth.)
+     */
+    '/dashboard',
+    '/dashboard/:path*',
+    /*
+     * Everything else only gets security headers, so it's safe (and cheaper)
+     * to skip on prefetch. Match all request paths except:
      * - api (API routes)
      * - _next/static (static files)
      * - _next/image (image optimization files)

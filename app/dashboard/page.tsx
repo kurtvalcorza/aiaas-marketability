@@ -1,4 +1,6 @@
 import type { Metadata } from 'next';
+import { cookies } from 'next/headers';
+import { redirect } from 'next/navigation';
 import { Download, LogOut, Database, AlertTriangle } from 'lucide-react';
 import {
   fetchDashboardData,
@@ -8,6 +10,7 @@ import {
   OVERLAY_LABELS,
   type DashboardData,
 } from '@/lib/dashboard-data';
+import { DASHBOARD_COOKIE, requireDashboardSession } from '@/lib/dashboard-auth';
 import { ScoreBarChart, BandBarChart } from '@/components/dashboard/DashboardCharts';
 import { StatCard, ChartCard } from '@/components/dashboard/DashboardUI';
 
@@ -31,6 +34,15 @@ function fmtDate(s: string | null): string {
 }
 
 export default async function DashboardPage() {
+  // Defense in depth: enforce auth in the page itself so the dashboard stays
+  // protected even if the middleware gate never runs — e.g. a client-settable
+  // `Next-Router-Prefetch` / `Purpose: prefetch` header that drops the request
+  // from the proxy.ts matcher. Never render data without a valid session.
+  const token = (await cookies()).get(DASHBOARD_COOKIE)?.value;
+  if (!(await requireDashboardSession(token))) {
+    redirect('/dashboard/login');
+  }
+
   let data: DashboardData | null = null;
   let loadError: string | null = null;
 
