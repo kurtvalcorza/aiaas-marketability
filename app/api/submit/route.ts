@@ -4,11 +4,13 @@
  * (Neon PostgreSQL or Google Sheets) with rate limiting and validation
  */
 
+import { after } from 'next/server';
 import { checkSubmissionRateLimit } from '@/lib/rate-limit';
 import { validateInterviewData } from '@/lib/validation';
 import { createJsonResponse, createErrorResponse } from '@/lib/api-utils';
 import { submitToGoogleSheets } from '@/services/submissionService';
-import { submitToNeon } from '@/services/neonSubmissionService';
+import { submitToNeon, updateEnrichment } from '@/services/neonSubmissionService';
+import { enrichInterview } from '@/services/enrichmentService';
 import { resolveStorageProvider } from '@/lib/storage-provider';
 import { InterviewData } from '@/lib/types';
 import { safeLogSubmissionResult, safeLogError } from '@/lib/safe-logger';
@@ -73,6 +75,22 @@ export async function POST(req: Request): Promise<Response> {
       }
       // All other errors are internal (network, etc.) - use custom message without sanitization
       return createErrorResponse('Submission failed. Please try again.', 500, { sanitize: false });
+    }
+
+    // Store-then-enrich: the row is already saved and the response returns at its
+    // usual latency. The qualitative-enrichment pass runs AFTER the response is
+    // flushed and writes back by assessment_id. Best-effort and Neon-only (the
+    // Sheets backend has no row id) — a failed enrichment never affects the 200.
+    if (provider === 'neon' && result.assessmentId != null) {
+      const assessmentId = result.assessmentId;
+      after(async () => {
+        try {
+          const enriched = await enrichInterview(data);
+          await updateEnrichment(assessmentId, enriched);
+        } catch (enrichError) {
+          safeLogError('[submit] enrichment task failed', enrichError);
+        }
+      });
     }
 
     return createJsonResponse({ success: true, message: result.message }, { status: 200 });

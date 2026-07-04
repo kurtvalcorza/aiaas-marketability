@@ -49,6 +49,28 @@ describe('buildCsv', () => {
     expect(csv.charCodeAt(0)).toBe(0xfeff);
     expect(csv).toContain(EXPORT_COLUMNS.join(','));
   });
+
+  it('exports the enrichment columns (research-only, no contact PII)', () => {
+    for (const col of [
+      'enrichment_status', 'evidence_sentiment', 'interview_quality', 'themes',
+      'quantified_pains', 'reconciliation_events', 'llm_inferred_cost_c',
+      'suggested_need_tags',
+    ]) {
+      expect(EXPORT_COLUMNS).toContain(col);
+    }
+    // and still no contact PII smuggled in via the new columns
+    for (const col of EXCLUDED_PII_COLUMNS) {
+      expect(EXPORT_COLUMNS).not.toContain(col);
+    }
+  });
+
+  it('serializes a JSONB-as-text cell without "[object Object]"', () => {
+    // The export SELECT casts JSONB to text, so buildCsv receives a string.
+    const rows = [{ assessment_id: 1, themes: '["cost","localization"]' }];
+    const csv = buildCsv(rows);
+    expect(csv).toContain('cost');
+    expect(csv).not.toContain('[object Object]');
+  });
 });
 
 describe('csvCell', () => {

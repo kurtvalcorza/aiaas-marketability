@@ -17,6 +17,14 @@ export interface SubmissionResult {
   success: boolean;
   message: string;
   error?: string;
+  /**
+   * Row id of the stored interview. Populated only by the Neon backend (the
+   * Google Sheets backend has no row id), and used to attach the qualitative
+   * enrichment after the response is returned. Optional by design. Typed
+   * `number | string` because the BIGINT column comes back as a string from the
+   * driver — it is only ever used as an opaque id in a parameterized query.
+   */
+  assessmentId?: number | string;
 }
 
 /**

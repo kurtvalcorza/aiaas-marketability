@@ -18,6 +18,11 @@ export const envSchema = z.object({
   DATABASE_URL: z.string().url().optional().or(z.literal('')),
   STORAGE_PROVIDER: z.string().optional(),
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
+  // Qualitative-enrichment pass (optional runtime knobs; read directly by the
+  // service). Enrichment runs when a Google AI key is present unless disabled.
+  ENRICHMENT_ENABLED: z.string().optional(),
+  ENRICHMENT_MODEL: z.string().optional(),
+  ENRICHMENT_TIMEOUT_MS: z.string().optional(),
 });
 
 export type Env = z.infer<typeof envSchema>;

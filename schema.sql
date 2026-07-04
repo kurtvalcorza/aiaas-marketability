@@ -35,8 +35,60 @@ CREATE TABLE IF NOT EXISTS aiaas_market_analysis (
   contact_name                  TEXT,        -- stored only with contact_consent = true
   contact_email                 TEXT,        -- stored only with contact_consent = true
   sanitized_summary             TEXT,
-  conversation_history          TEXT
+  conversation_history          TEXT,
+  -- ── LLM qualitative enrichment (research-only; NEVER feeds DVI / route) ──────
+  -- Populated by a second, structured LLM pass after the row is stored. Every
+  -- column here is nullable and excluded from all DVI math. See
+  -- docs/specs/llm-scope-expansion.md.
+  enrichment_status             TEXT NOT NULL DEFAULT 'pending'
+    CHECK (enrichment_status IN ('pending','ok','failed','skipped')),
+  enrichment_model              TEXT,
+  enrichment_version            TEXT,
+  enriched_at                   TIMESTAMPTZ,
+  themes                        JSONB,   -- string[]
+  quantified_pains              JSONB,   -- {metric,value,unit,context}[]
+  evidence_sentiment            TEXT     CHECK (evidence_sentiment IN ('negative','mixed','neutral','positive')),
+  interview_quality             TEXT     CHECK (interview_quality IN ('low','medium','high')),
+  reconciliation_events         JSONB,   -- {component,conflict,outcome,rationale}[]
+  -- Shadow (evidence-based) ratings — comparison only, EXCLUDED from dvi_score
+  llm_inferred_cost_c           NUMERIC(3,1) CHECK (llm_inferred_cost_c          BETWEEN 0 AND 5),
+  llm_inferred_technical_t      NUMERIC(3,1) CHECK (llm_inferred_technical_t     BETWEEN 0 AND 5),
+  llm_inferred_localization_l   NUMERIC(3,1) CHECK (llm_inferred_localization_l  BETWEEN 0 AND 5),
+  llm_inferred_uvp_u            NUMERIC(3,1) CHECK (llm_inferred_uvp_u           BETWEEN 0 AND 5),
+  llm_inferred_rationale        JSONB,   -- {cost,technical,localization,uvp: string}
+  suggested_need_tags           TEXT,    -- '; '-joined
+  suggested_friction_tags       TEXT,    -- '; '-joined
+  suggested_use_case_tags       TEXT     -- '; '-joined
 );
+
+-- Idempotent migration for existing deployments (safe to re-run). New installs
+-- already get these from the CREATE TABLE above; this block upgrades a table
+-- created before the enrichment pass without dropping it.
+ALTER TABLE aiaas_market_analysis
+  ADD COLUMN IF NOT EXISTS enrichment_status TEXT NOT NULL DEFAULT 'pending'
+    CHECK (enrichment_status IN ('pending','ok','failed','skipped')),
+  ADD COLUMN IF NOT EXISTS enrichment_model            TEXT,
+  ADD COLUMN IF NOT EXISTS enrichment_version          TEXT,
+  ADD COLUMN IF NOT EXISTS enriched_at                 TIMESTAMPTZ,
+  ADD COLUMN IF NOT EXISTS themes                      JSONB,
+  ADD COLUMN IF NOT EXISTS quantified_pains            JSONB,
+  ADD COLUMN IF NOT EXISTS evidence_sentiment          TEXT
+    CHECK (evidence_sentiment IN ('negative','mixed','neutral','positive')),
+  ADD COLUMN IF NOT EXISTS interview_quality           TEXT
+    CHECK (interview_quality IN ('low','medium','high')),
+  ADD COLUMN IF NOT EXISTS reconciliation_events       JSONB,
+  ADD COLUMN IF NOT EXISTS llm_inferred_cost_c         NUMERIC(3,1)
+    CHECK (llm_inferred_cost_c         BETWEEN 0 AND 5),
+  ADD COLUMN IF NOT EXISTS llm_inferred_technical_t    NUMERIC(3,1)
+    CHECK (llm_inferred_technical_t    BETWEEN 0 AND 5),
+  ADD COLUMN IF NOT EXISTS llm_inferred_localization_l NUMERIC(3,1)
+    CHECK (llm_inferred_localization_l BETWEEN 0 AND 5),
+  ADD COLUMN IF NOT EXISTS llm_inferred_uvp_u          NUMERIC(3,1)
+    CHECK (llm_inferred_uvp_u          BETWEEN 0 AND 5),
+  ADD COLUMN IF NOT EXISTS llm_inferred_rationale      JSONB,
+  ADD COLUMN IF NOT EXISTS suggested_need_tags         TEXT,
+  ADD COLUMN IF NOT EXISTS suggested_friction_tags     TEXT,
+  ADD COLUMN IF NOT EXISTS suggested_use_case_tags     TEXT;
 
 -- Aggregate demand views for the researcher dashboard (a planned follow-up).
 CREATE OR REPLACE VIEW dvi_by_vector AS
@@ -119,3 +171,41 @@ SELECT
     1
   )                                          AS workbench_interest_pct
 FROM flagged;
+
+-- ── Enrichment research views (only rows the LLM pass successfully coded) ──────
+
+-- Theme frequency across the corpus.
+CREATE OR REPLACE VIEW theme_frequency AS
+SELECT theme, COUNT(*) AS mentions
+FROM aiaas_market_analysis, jsonb_array_elements_text(themes) AS theme
+WHERE enrichment_status = 'ok'
+GROUP BY theme
+ORDER BY mentions DESC;
+
+-- Self-report vs evidence-based (shadow) rating gap per route — a bias signal.
+-- Positive gap = respondents rated the barrier higher than the evidence supports.
+CREATE OR REPLACE VIEW self_vs_inferred AS
+SELECT final_route,
+  COUNT(*)                                                              AS interviews,
+  ROUND(AVG(cost_barrier_score_c          - llm_inferred_cost_c), 2)         AS cost_gap,
+  ROUND(AVG(technical_complexity_score_t  - llm_inferred_technical_t), 2)    AS technical_gap,
+  ROUND(AVG(localization_gap_score_l      - llm_inferred_localization_l), 2) AS localization_gap,
+  ROUND(AVG(uvp_resonance_score_u         - llm_inferred_uvp_u), 2)          AS uvp_gap
+FROM aiaas_market_analysis
+WHERE enrichment_status = 'ok'
+GROUP BY final_route;
+
+-- Reconciliation rate: share of interviews where a self-rating was revised.
+CREATE OR REPLACE VIEW reconciliation_rate AS
+SELECT final_route,
+  COUNT(*)                                                        AS interviews,
+  COUNT(*) FILTER (WHERE reconciliation_events @> '[{"outcome":"revised"}]') AS revised
+FROM aiaas_market_analysis
+WHERE enrichment_status = 'ok'
+GROUP BY final_route;
+
+-- Enrichment coverage: how much of the corpus has been coded, by status.
+CREATE OR REPLACE VIEW enrichment_coverage AS
+SELECT enrichment_status, COUNT(*) AS interviews
+FROM aiaas_market_analysis
+GROUP BY enrichment_status;
