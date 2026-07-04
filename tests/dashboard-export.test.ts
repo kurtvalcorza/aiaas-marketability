@@ -7,13 +7,14 @@ import {
 } from '@/lib/dashboard-export';
 
 describe('EXPORT_COLUMNS — no contact PII', () => {
-  it('excludes contact_name and contact_email', () => {
-    expect(EXPORT_COLUMNS).not.toContain('contact_name');
-    expect(EXPORT_COLUMNS).not.toContain('contact_email');
-  });
-
-  it('lists exactly the excluded PII columns for reference', () => {
-    expect([...EXCLUDED_PII_COLUMNS]).toEqual(['contact_name', 'contact_email']);
+  it('excludes every PII column listed in EXCLUDED_PII_COLUMNS', () => {
+    // EXCLUDED_PII_COLUMNS is the single source of truth for the exclusion.
+    for (const col of EXCLUDED_PII_COLUMNS) {
+      expect(EXPORT_COLUMNS).not.toContain(col);
+    }
+    // Guard against the exclusion list being silently emptied.
+    expect(EXCLUDED_PII_COLUMNS).toContain('contact_name');
+    expect(EXCLUDED_PII_COLUMNS).toContain('contact_email');
   });
 
   it('keeps the consent flag and core analytics columns', () => {

@@ -64,13 +64,12 @@ export function csvCell(value: unknown): string {
 
 /**
  * Builds CSV text: a UTF-8 BOM (so Excel reads accents correctly), a header
- * row, then one row per record, using the given columns.
+ * row, then one row per record, over EXPORT_COLUMNS.
  */
-export function buildCsv(
-  rows: Record<string, unknown>[],
-  columns: readonly string[] = EXPORT_COLUMNS,
-): string {
-  const header = columns.join(',');
-  const body = rows.map((row) => columns.map((c) => csvCell(row[c])).join(',')).join('\r\n');
+export function buildCsv(rows: Record<string, unknown>[]): string {
+  const header = EXPORT_COLUMNS.join(',');
+  const body = rows
+    .map((row) => EXPORT_COLUMNS.map((c) => csvCell(row[c])).join(','))
+    .join('\r\n');
   return `﻿${header}\r\n${body}\r\n`;
 }
