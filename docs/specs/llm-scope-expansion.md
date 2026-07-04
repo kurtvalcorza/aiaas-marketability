@@ -342,7 +342,10 @@ if (result.assessmentId != null) {
 return createJsonResponse({ success: true, message: result.message }, { status: 200 });
 ```
 
-`submitToNeon` gains `RETURNING assessment_id`:
+`submitToNeon` gains `RETURNING assessment_id`. `SubmissionResult`
+(`services/submissionService.ts`) is shared with the Google Sheets backend, which has no
+row id, so add the field as **optional** — `assessmentId?: number` — and only the Neon path
+populates it (the `after()` block already guards on `result.assessmentId != null`):
 
 ```ts
 const inserted = await sql`INSERT INTO aiaas_market_analysis ( … ) VALUES ( … )
@@ -559,5 +562,3 @@ can't run up cost or hang the worker.
 - In-chat tag confirmation and structured re-rate via tool calling (retire the text markers).
 - Researcher-facing retrieval/synthesis LLM over the redacted corpus (dashboard Q&A).
 - Interview-quality-driven adaptive probing (spend more turns on high-signal respondents).
-</content>
-</invoke>
