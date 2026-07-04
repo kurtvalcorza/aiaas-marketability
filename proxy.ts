@@ -11,7 +11,7 @@
 
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
-import { DASHBOARD_COOKIE, verifySessionToken } from '@/lib/dashboard-auth';
+import { DASHBOARD_COOKIE, requireDashboardSession } from '@/lib/dashboard-auth';
 
 /**
  * Generates a cryptographically secure nonce for CSP
@@ -32,9 +32,8 @@ export async function proxy(request: NextRequest) {
   // /dashboard requires a valid session cookie. Fails closed: with no
   // DASHBOARD_PASSWORD configured, the dashboard is simply unreachable.
   if (pathname.startsWith('/dashboard') && pathname !== '/dashboard/login') {
-    const secret = process.env.DASHBOARD_PASSWORD;
     const token = request.cookies.get(DASHBOARD_COOKIE)?.value;
-    const authed = secret ? await verifySessionToken(token, secret) : false;
+    const authed = await requireDashboardSession(token);
     if (!authed) {
       const loginUrl = request.nextUrl.clone();
       loginUrl.pathname = '/dashboard/login';

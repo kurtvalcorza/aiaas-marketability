@@ -145,7 +145,7 @@ function DashboardBody({ data }: { data: DashboardData }) {
         <StatCard
           label="Workbench interest"
           value={workbench.pct === null ? '—' : `${workbench.pct.toFixed(0)}%`}
-          hint={`${workbench.interested} of ${workbench.interviews} respondents`}
+          hint={`${workbench.interested}/${workbench.interviews} · keyword-matched (approx.)`}
         />
         <StatCard
           label="Contact opt-ins"

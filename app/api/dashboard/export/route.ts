@@ -9,7 +9,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { neon } from '@neondatabase/serverless';
-import { DASHBOARD_COOKIE, verifySessionToken } from '@/lib/dashboard-auth';
+import { DASHBOARD_COOKIE, requireDashboardSession } from '@/lib/dashboard-auth';
 
 export const dynamic = 'force-dynamic';
 export const maxDuration = 30;
@@ -62,9 +62,8 @@ function csvCell(value: unknown): string {
 }
 
 export async function GET(request: NextRequest): Promise<Response> {
-  const secret = process.env.DASHBOARD_PASSWORD;
   const token = request.cookies.get(DASHBOARD_COOKIE)?.value;
-  const authed = secret ? await verifySessionToken(token, secret) : false;
+  const authed = await requireDashboardSession(token);
   if (!authed) {
     return NextResponse.redirect(new URL('/dashboard/login', request.url), 303);
   }

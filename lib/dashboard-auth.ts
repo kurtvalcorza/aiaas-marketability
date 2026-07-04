@@ -100,3 +100,20 @@ export async function verifySessionToken(
 
   return true;
 }
+
+/**
+ * Single fail-closed authorization check for a dashboard request: reads the
+ * shared secret from the environment and verifies the session token against it.
+ * Returns false when DASHBOARD_PASSWORD is unset (dashboard unreachable).
+ *
+ * Use this everywhere a dashboard surface must be guarded — the middleware
+ * (proxy.ts) and every `/api/dashboard/*` route (which the middleware matcher
+ * does NOT cover) — so no future route re-implements (or forgets) the check.
+ */
+export async function requireDashboardSession(
+  token: string | undefined | null,
+  nowMs: number = Date.now(),
+): Promise<boolean> {
+  const secret = process.env.DASHBOARD_PASSWORD;
+  return secret ? verifySessionToken(token, secret, nowMs) : false;
+}
