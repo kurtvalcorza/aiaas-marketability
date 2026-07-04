@@ -62,7 +62,7 @@ font-src 'self' https://fonts.gstatic.com;
 object-src 'none';
 base-uri 'self';
 form-action 'self';
-frame-ancestors 'self' https://acabai-ph.vercel.app https://master.d3bx5uqqofxvve.amplifyapp.com https://kurt.valcorza.com;
+frame-ancestors 'self' https://acabai-ph.vercel.app https://kurt.valcorza.com;
 connect-src 'self' https://generativelanguage.googleapis.com https://script.google.com https://va.vercel-scripts.com https://vitals.vercel-insights.com;
 worker-src 'self' blob:;
 upgrade-insecure-requests;

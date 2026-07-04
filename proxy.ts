@@ -49,7 +49,7 @@ export function proxy(request: NextRequest) {
   // Tightened frame-ancestors: specific domains only (no wildcards in production)
   const frameAncestors = isDev
     ? "'self' https://*.vercel.app https://*.netlify.app https://*.github.io https://*.pages.dev https://*.amplifyapp.com https://kurt.valcorza.com https://localhost:* http://localhost:*"
-    : "'self' https://acabai-ph.vercel.app https://master.d3bx5uqqofxvve.amplifyapp.com https://kurt.valcorza.com";
+    : "'self' https://acabai-ph.vercel.app https://kurt.valcorza.com";
 
   // Content Security Policy
   const cspHeader = `
