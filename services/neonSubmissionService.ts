@@ -9,6 +9,7 @@ import { InterviewData } from '@/lib/types';
 import { SubmissionResult } from './submissionService';
 import { buildSubmissionRecord } from './submissionRecord';
 import { safeLogError } from '@/lib/safe-logger';
+import type { EnrichmentResult } from './enrichmentService';
 
 const QUERY_TIMEOUT_MS = 10_000;
 
@@ -29,7 +30,7 @@ export async function submitToNeon(data: InterviewData): Promise<SubmissionResul
     const sql = neon(process.env.DATABASE_URL, { fetchOptions: { signal: abortController.signal } });
     const r = buildSubmissionRecord(data);
 
-    await sql`
+    const inserted = (await sql`
       INSERT INTO aiaas_market_analysis (
         timestamp, segment_vector, ai_maturity_overlay, final_route,
         organization_type, current_work_type, ai_maturity, ai_work,
@@ -45,10 +46,15 @@ export async function submitToNeon(data: InterviewData): Promise<SubmissionResul
         ${r.dvi}, ${r.interpretation}, ${r.likelihoodToTry}, ${r.firstUsePathway}, ${r.timeframe}, ${r.adoptionBlockers},
         ${r.contactConsent}, ${r.contactName}, ${r.contactEmail}, ${r.summary}, ${r.conversationHistory}
       )
-    `;
+      RETURNING assessment_id
+    `) as { assessment_id: number }[];
 
     console.log('[neonSubmission] Interview inserted successfully');
-    return { success: true, message: 'Interview submitted successfully' };
+    return {
+      success: true,
+      message: 'Interview submitted successfully',
+      assessmentId: inserted[0]?.assessment_id,
+    };
   } catch (error: unknown) {
     safeLogError('[neonSubmission] Error inserting interview', error);
     return {
@@ -58,5 +64,60 @@ export async function submitToNeon(data: InterviewData): Promise<SubmissionResul
     };
   } finally {
     clearTimeout(timeout);
+  }
+}
+
+/**
+ * Attaches the qualitative enrichment to an already-stored interview row.
+ *
+ * Best-effort: a `null` result (enrichment disabled, unconfigured, or failed)
+ * flips the row to `skipped`/`failed` so coverage stays observable, and any DB
+ * error is swallowed — enrichment must never surface as a submission failure.
+ * JSONB columns are cast explicitly (`::jsonb`) since the params are JSON text.
+ */
+export async function updateEnrichment(
+  assessmentId: number,
+  enriched: EnrichmentResult | null,
+): Promise<void> {
+  if (!process.env.DATABASE_URL) return;
+
+  try {
+    const sql = neon(process.env.DATABASE_URL);
+
+    if (!enriched) {
+      const status = process.env.GOOGLE_GENERATIVE_AI_API_KEY ? 'failed' : 'skipped';
+      await sql`
+        UPDATE aiaas_market_analysis
+        SET enrichment_status = ${status}
+        WHERE assessment_id = ${assessmentId}
+      `;
+      return;
+    }
+
+    const e = enriched.enrichment;
+    await sql`
+      UPDATE aiaas_market_analysis SET
+        enrichment_status  = 'ok',
+        enrichment_model   = ${enriched.model},
+        enrichment_version = ${enriched.version},
+        enriched_at        = NOW(),
+        themes                 = ${JSON.stringify(e.themes)}::jsonb,
+        quantified_pains       = ${JSON.stringify(e.quantifiedPains)}::jsonb,
+        evidence_sentiment     = ${e.sentiment},
+        interview_quality      = ${e.interviewQuality},
+        reconciliation_events  = ${JSON.stringify(e.reconciliationEvents)}::jsonb,
+        llm_inferred_cost_c         = ${e.inferred.cost},
+        llm_inferred_technical_t    = ${e.inferred.technical},
+        llm_inferred_localization_l = ${e.inferred.localization},
+        llm_inferred_uvp_u          = ${e.inferred.uvp},
+        llm_inferred_rationale      = ${JSON.stringify(e.inferredRationale)}::jsonb,
+        suggested_need_tags     = ${e.suggestedNeedTags.join('; ')},
+        suggested_friction_tags = ${e.suggestedFrictionTags.join('; ')},
+        suggested_use_case_tags = ${e.suggestedUseCaseTags.join('; ')}
+      WHERE assessment_id = ${assessmentId}
+    `;
+    console.log('[neonSubmission] Enrichment attached');
+  } catch (error: unknown) {
+    safeLogError('[neonSubmission] Error attaching enrichment', error);
   }
 }

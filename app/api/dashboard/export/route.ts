@@ -31,6 +31,10 @@ export async function GET(request: NextRequest): Promise<Response> {
     const sql = neon(process.env.DATABASE_URL);
     // contact_name / contact_email are deliberately omitted — the export must
     // not expose respondents' personal details to dashboard-password holders.
+    // JSONB columns (themes, quantified_pains, reconciliation_events,
+    // llm_inferred_rationale) are cast to text so the CSV cell carries the JSON
+    // string instead of "[object Object]". Enrichment columns hold no contact
+    // PII, so they are safe to include.
     const rows = (await sql`
       SELECT assessment_id, created_at, timestamp, segment_vector, ai_maturity_overlay,
              final_route, organization_type, current_work_type, ai_maturity, ai_work,
@@ -38,7 +42,15 @@ export async function GET(request: NextRequest): Promise<Response> {
              cost_barrier_score_c, technical_complexity_score_t, localization_gap_score_l,
              uvp_resonance_score_u, dvi_score, interpretation, likelihood_to_try,
              first_use_pathway, timeframe, adoption_blockers, contact_consent,
-             sanitized_summary, conversation_history
+             sanitized_summary, conversation_history,
+             enrichment_status, evidence_sentiment, interview_quality,
+             themes::text                AS themes,
+             quantified_pains::text      AS quantified_pains,
+             reconciliation_events::text AS reconciliation_events,
+             llm_inferred_cost_c, llm_inferred_technical_t,
+             llm_inferred_localization_l, llm_inferred_uvp_u,
+             llm_inferred_rationale::text AS llm_inferred_rationale,
+             suggested_need_tags, suggested_friction_tags, suggested_use_case_tags
       FROM aiaas_market_analysis
       ORDER BY created_at ASC
     `) as Record<string, unknown>[];

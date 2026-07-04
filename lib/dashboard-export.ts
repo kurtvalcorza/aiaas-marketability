@@ -39,6 +39,23 @@ export const EXPORT_COLUMNS = [
   'contact_consent',
   'sanitized_summary',
   'conversation_history',
+  // LLM qualitative enrichment (research-only; no contact PII — safe to export).
+  // JSONB columns are cast to text in the export SELECT so csvCell serializes
+  // them as JSON rather than "[object Object]".
+  'enrichment_status',
+  'evidence_sentiment',
+  'interview_quality',
+  'themes',
+  'quantified_pains',
+  'reconciliation_events',
+  'llm_inferred_cost_c',
+  'llm_inferred_technical_t',
+  'llm_inferred_localization_l',
+  'llm_inferred_uvp_u',
+  'llm_inferred_rationale',
+  'suggested_need_tags',
+  'suggested_friction_tags',
+  'suggested_use_case_tags',
 ] as const;
 
 /** Contact PII columns that must never appear in the export. */
