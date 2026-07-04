@@ -9,7 +9,7 @@ import { InterviewData } from '@/lib/types';
 import { SubmissionResult } from './submissionService';
 import { buildSubmissionRecord } from './submissionRecord';
 import { safeLogError } from '@/lib/safe-logger';
-import type { EnrichmentResult } from './enrichmentService';
+import { isEnrichmentDisabled, type EnrichmentResult } from './enrichmentService';
 
 const QUERY_TIMEOUT_MS = 10_000;
 
@@ -47,12 +47,14 @@ export async function submitToNeon(data: InterviewData): Promise<SubmissionResul
         ${r.contactConsent}, ${r.contactName}, ${r.contactEmail}, ${r.summary}, ${r.conversationHistory}
       )
       RETURNING assessment_id
-    `) as { assessment_id: number }[];
+    `) as { assessment_id: number | string }[];
 
     console.log('[neonSubmission] Interview inserted successfully');
     return {
       success: true,
       message: 'Interview submitted successfully',
+      // BIGINT comes back from the driver as a string (precision-safe); it is
+      // only ever used as an opaque id in a parameterized query, so keep it as-is.
       assessmentId: inserted[0]?.assessment_id,
     };
   } catch (error: unknown) {
@@ -76,7 +78,7 @@ export async function submitToNeon(data: InterviewData): Promise<SubmissionResul
  * JSONB columns are cast explicitly (`::jsonb`) since the params are JSON text.
  */
 export async function updateEnrichment(
-  assessmentId: number,
+  assessmentId: number | string,
   enriched: EnrichmentResult | null,
 ): Promise<void> {
   if (!process.env.DATABASE_URL) return;
@@ -85,7 +87,9 @@ export async function updateEnrichment(
     const sql = neon(process.env.DATABASE_URL);
 
     if (!enriched) {
-      const status = process.env.GOOGLE_GENERATIVE_AI_API_KEY ? 'failed' : 'skipped';
+      // Distinguish an intentional non-run (disabled / no key) from a genuine
+      // runtime failure (timeout / model error) so enrichment_coverage stays honest.
+      const status = isEnrichmentDisabled() ? 'skipped' : 'failed';
       await sql`
         UPDATE aiaas_market_analysis
         SET enrichment_status = ${status}

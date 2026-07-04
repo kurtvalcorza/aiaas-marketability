@@ -57,7 +57,24 @@ HARD RULES
   nothing to report. Do not invent numbers.
 `.trim();
 
+/**
+ * True when enrichment is intentionally off (disabled flag or no API key). This
+ * is a `skipped` outcome, distinct from a runtime `failed` (timeout / model
+ * error). `updateEnrichment` uses the same check so coverage is classified
+ * accurately — the shared helper keeps the two call sites from drifting.
+ */
+export function isEnrichmentDisabled(): boolean {
+  return (
+    process.env.ENRICHMENT_ENABLED === 'false' ||
+    !process.env.GOOGLE_GENERATIVE_AI_API_KEY
+  );
+}
+
 function buildPrompt(d: InterviewData): string {
+  // Free-text fields are PII-sanitized here, before anything leaves the server
+  // for the model. The stored row is scrubbed separately in buildSubmissionRecord;
+  // this closes the input side so raw request-body text never reaches Gemini even
+  // if a client bypassed the frontend scrub. (Tags are picked from fixed lists.)
   return [
     `Route: ${d.route}   Overlay: ${d.overlay}`,
     `Self-ratings — Cost:${d.scores.costBarrier} Technical:${d.scores.technicalComplexity} ` +
@@ -65,8 +82,8 @@ function buildPrompt(d: InterviewData): string {
     `Need tags: ${d.needTags.join('; ')}`,
     `Friction tags: ${d.frictionTags.join('; ')}`,
     `Use-case tags: ${d.useCaseTags.join('; ')}`,
-    `Main problem: ${d.mainProblem}`,
-    `Transcript:\n${d.conversationHistory ?? ''}`,
+    `Main problem: ${sanitizePII(d.mainProblem)}`,
+    `Transcript:\n${sanitizePII(d.conversationHistory ?? '')}`,
   ].join('\n');
 }
 
@@ -78,8 +95,7 @@ export async function enrichInterview(
   data: InterviewData,
   deps: EnrichDeps = {},
 ): Promise<EnrichmentResult | null> {
-  if (process.env.ENRICHMENT_ENABLED === 'false') return null;
-  if (!process.env.GOOGLE_GENERATIVE_AI_API_KEY) return null;
+  if (isEnrichmentDisabled()) return null;
 
   const modelId = process.env.ENRICHMENT_MODEL || DEFAULT_MODEL;
   const timeoutMs = Number(process.env.ENRICHMENT_TIMEOUT_MS) || DEFAULT_TIMEOUT_MS;

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { enrichInterview, redactEnrichment } from '@/services/enrichmentService';
+import { enrichInterview, redactEnrichment, isEnrichmentDisabled } from '@/services/enrichmentService';
 import { EnrichmentSchema, Enrichment } from '@/lib/schemas/enrichment';
 import { InterviewData } from '@/lib/types';
 
@@ -92,6 +92,22 @@ describe('enrichInterview', () => {
     const result = await enrichInterview(data, { generate: generate as never });
     expect(result).toBeNull();
     expect(generate).not.toHaveBeenCalled();
+  });
+});
+
+describe('isEnrichmentDisabled — drives skipped vs failed classification', () => {
+  it('is false when a key is present and not disabled (a null result means failed)', () => {
+    expect(isEnrichmentDisabled()).toBe(false);
+  });
+
+  it('is true when explicitly disabled (a null result means skipped)', () => {
+    process.env.ENRICHMENT_ENABLED = 'false';
+    expect(isEnrichmentDisabled()).toBe(true);
+  });
+
+  it('is true when no API key is configured', () => {
+    delete process.env.GOOGLE_GENERATIVE_AI_API_KEY;
+    expect(isEnrichmentDisabled()).toBe(true);
   });
 });
 
