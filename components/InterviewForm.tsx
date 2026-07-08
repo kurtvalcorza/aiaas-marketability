@@ -45,6 +45,17 @@ function Section({ title, children }: { title: string; children: React.ReactNode
   );
 }
 
+function ErrorNote({ id, children }: { id?: string; children: React.ReactNode }) {
+  return (
+    <p id={id} className="flex items-center gap-1 text-xs font-medium text-red-600">
+      <svg viewBox="0 0 16 16" width="12" height="12" fill="currentColor" aria-hidden="true">
+        <path d="M8 1a7 7 0 100 14A7 7 0 008 1zm0 3a.9.9 0 01.9.9v3.6a.9.9 0 01-1.8 0V4.9A.9.9 0 018 4zm0 7.4a1 1 0 110 2 1 1 0 010-2z" />
+      </svg>
+      {children}
+    </p>
+  );
+}
+
 function Question({
   id,
   label,
@@ -58,26 +69,26 @@ function Question({
   error?: boolean;
   children: React.ReactNode;
 }) {
+  const labelId = id ? `${id}-label` : undefined;
+  const errorId = id ? `${id}-error` : undefined;
   return (
+    // role="group" + aria-labelledby names this set of radios/checkboxes; when it's
+    // unanswered, aria-describedby ties the group to the inline error text so screen
+    // readers announce the problem (aria-invalid isn't a supported prop on a group).
     <div
       id={id}
-      aria-invalid={error || undefined}
+      role="group"
+      aria-labelledby={labelId}
+      aria-describedby={error ? errorId : undefined}
       className={`space-y-2 scroll-mt-24 ${
         error ? 'rounded-lg border border-red-300 bg-red-50/60 p-3 -m-0.5' : ''
       }`}
     >
-      <p className={`text-sm font-medium ${error ? 'text-red-700' : 'text-gray-800'}`}>
+      <p id={labelId} className={`text-sm font-medium ${error ? 'text-red-700' : 'text-gray-800'}`}>
         {label} {required && <span className="text-red-500">*</span>}
       </p>
       {children}
-      {error && (
-        <p className="flex items-center gap-1 text-xs font-medium text-red-600">
-          <svg viewBox="0 0 16 16" width="12" height="12" fill="currentColor" aria-hidden="true">
-            <path d="M8 1a7 7 0 100 14A7 7 0 008 1zm0 3a.9.9 0 01.9.9v3.6a.9.9 0 01-1.8 0V4.9A.9.9 0 018 4zm0 7.4a1 1 0 110 2 1 1 0 010-2z" />
-          </svg>
-          This question needs an answer.
-        </p>
-      )}
+      {error && <ErrorNote id={errorId}>This question needs an answer.</ErrorNote>}
     </div>
   );
 }
@@ -158,7 +169,7 @@ export function InterviewForm({ onSubmit }: InterviewFormProps) {
     if (!form.firstUse) m.push({ id: 'q-firstUse', label: 'first-use pathway' });
     if (!form.timeframe) m.push({ id: 'q-timeframe', label: 'timeframe' });
     if (!form.contactAnswered) m.push({ id: 'q-contact', label: 'contact preference' });
-    if (form.contactConsent && !form.contactEmail.trim()) m.push({ id: 'q-contact', label: 'work email' });
+    if (form.contactConsent && !form.contactEmail.trim()) m.push({ id: 'q-contactEmail', label: 'work email' });
     return m;
   }, [form, needsPrimary]);
 
@@ -319,13 +330,25 @@ export function InterviewForm({ onSubmit }: InterviewFormProps) {
               onChange={(e) => set('contactName', e.target.value)}
               className="border border-gray-300 rounded-lg px-3 py-2 text-sm"
             />
-            <input
-              type="email"
-              placeholder="Work email"
-              value={form.contactEmail}
-              onChange={(e) => set('contactEmail', e.target.value)}
-              className="border border-gray-300 rounded-lg px-3 py-2 text-sm"
-            />
+            <div className="space-y-1">
+              <input
+                id="q-contactEmail"
+                type="email"
+                placeholder="Work email"
+                aria-invalid={hasError('q-contactEmail') || undefined}
+                aria-describedby={hasError('q-contactEmail') ? 'q-contactEmail-error' : undefined}
+                value={form.contactEmail}
+                onChange={(e) => set('contactEmail', e.target.value)}
+                className={`w-full rounded-lg px-3 py-2 text-sm border scroll-mt-24 ${
+                  hasError('q-contactEmail')
+                    ? 'border-red-400 bg-red-50/60'
+                    : 'border-gray-300'
+                }`}
+              />
+              {hasError('q-contactEmail') && (
+                <ErrorNote id="q-contactEmail-error">A work email is required to be contacted.</ErrorNote>
+              )}
+            </div>
           </div>
         )}
       </Section>
