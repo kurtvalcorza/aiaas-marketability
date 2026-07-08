@@ -45,13 +45,39 @@ function Section({ title, children }: { title: string; children: React.ReactNode
   );
 }
 
-function Question({ label, required, children }: { label: string; required?: boolean; children: React.ReactNode }) {
+function Question({
+  id,
+  label,
+  required,
+  error,
+  children,
+}: {
+  id?: string;
+  label: string;
+  required?: boolean;
+  error?: boolean;
+  children: React.ReactNode;
+}) {
   return (
-    <div className="space-y-2">
-      <p className="text-sm font-medium text-gray-800">
+    <div
+      id={id}
+      aria-invalid={error || undefined}
+      className={`space-y-2 scroll-mt-24 ${
+        error ? 'rounded-lg border border-red-300 bg-red-50/60 p-3 -m-0.5' : ''
+      }`}
+    >
+      <p className={`text-sm font-medium ${error ? 'text-red-700' : 'text-gray-800'}`}>
         {label} {required && <span className="text-red-500">*</span>}
       </p>
       {children}
+      {error && (
+        <p className="flex items-center gap-1 text-xs font-medium text-red-600">
+          <svg viewBox="0 0 16 16" width="12" height="12" fill="currentColor" aria-hidden="true">
+            <path d="M8 1a7 7 0 100 14A7 7 0 008 1zm0 3a.9.9 0 01.9.9v3.6a.9.9 0 01-1.8 0V4.9A.9.9 0 018 4zm0 7.4a1 1 0 110 2 1 1 0 010-2z" />
+          </svg>
+          This question needs an answer.
+        </p>
+      )}
     </div>
   );
 }
@@ -117,28 +143,40 @@ export function InterviewForm({ onSubmit }: InterviewFormProps) {
   const ad = isAdvancedDemand(form);
 
   const missing = useMemo(() => {
-    const m: string[] = [];
-    if (!form.orgType) m.push('organization type');
-    if (!form.workType) m.push('current work');
-    if (needsPrimary && !form.primaryContext) m.push('primary context');
-    if (!form.aiMaturity) m.push('AI maturity');
-    if (form.needTags.length === 0) m.push('what you need');
-    if (form.competitors.length === 0) m.push('alternatives tried');
-    if (form.costRating < 0) m.push('cost rating');
-    if (form.techRating < 0) m.push('technical rating');
-    if (form.locRating < 0) m.push('localization rating');
-    if (form.uvpRating < 0) m.push('AIaaS usefulness rating');
-    if (!form.likelihood) m.push('likelihood to try');
-    if (!form.firstUse) m.push('first-use pathway');
-    if (!form.timeframe) m.push('timeframe');
-    if (!form.contactAnswered) m.push('contact preference');
-    if (form.contactConsent && !form.contactEmail.trim()) m.push('work email');
+    const m: { id: string; label: string }[] = [];
+    if (!form.orgType) m.push({ id: 'q-orgType', label: 'organization type' });
+    if (!form.workType) m.push({ id: 'q-workType', label: 'current work' });
+    if (needsPrimary && !form.primaryContext) m.push({ id: 'q-primaryContext', label: 'primary context' });
+    if (!form.aiMaturity) m.push({ id: 'q-aiMaturity', label: 'AI maturity' });
+    if (form.needTags.length === 0) m.push({ id: 'q-needTags', label: 'what you need' });
+    if (form.competitors.length === 0) m.push({ id: 'q-competitors', label: 'alternatives tried' });
+    if (form.costRating < 0) m.push({ id: 'q-costRating', label: 'cost rating' });
+    if (form.techRating < 0) m.push({ id: 'q-techRating', label: 'technical rating' });
+    if (form.locRating < 0) m.push({ id: 'q-locRating', label: 'localization rating' });
+    if (form.uvpRating < 0) m.push({ id: 'q-uvpRating', label: 'AIaaS usefulness rating' });
+    if (!form.likelihood) m.push({ id: 'q-likelihood', label: 'likelihood to try' });
+    if (!form.firstUse) m.push({ id: 'q-firstUse', label: 'first-use pathway' });
+    if (!form.timeframe) m.push({ id: 'q-timeframe', label: 'timeframe' });
+    if (!form.contactAnswered) m.push({ id: 'q-contact', label: 'contact preference' });
+    if (form.contactConsent && !form.contactEmail.trim()) m.push({ id: 'q-contact', label: 'work email' });
     return m;
   }, [form, needsPrimary]);
+
+  const missingIds = useMemo(() => new Set(missing.map((m) => m.id)), [missing]);
+  const hasError = (id: string) => showErrors && missingIds.has(id);
+
+  const scrollToQuestion = (id: string) => {
+    const el = document.getElementById(id);
+    if (el && typeof el.scrollIntoView === 'function') {
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  };
 
   const handleSubmit = () => {
     if (missing.length > 0) {
       setShowErrors(true);
+      // Jump the respondent to the first item they missed.
+      requestAnimationFrame(() => scrollToQuestion(missing[0].id));
       return;
     }
     onSubmit(form);
@@ -165,30 +203,30 @@ export function InterviewForm({ onSubmit }: InterviewFormProps) {
       </div>
 
       <Section title="A · About your team">
-        <Question label="Which best describes your team or organization?" required>
+        <Question id="q-orgType" error={hasError('q-orgType')} label="Which best describes your team or organization?" required>
           <RadioGroup options={ORG_TYPES} value={form.orgType} onChange={(v) => set('orgType', v)} />
         </Question>
-        <Question label="Which best describes your current work?" required>
+        <Question id="q-workType" error={hasError('q-workType')} label="Which best describes your current work?" required>
           <RadioGroup options={WORK_TYPES} value={form.workType} onChange={(v) => set('workType', v)} />
         </Question>
         {needsPrimary && (
-          <Question label="If you used the AIaaS platform, which would be your team's PRIMARY context?" required>
+          <Question id="q-primaryContext" error={hasError('q-primaryContext')} label="If you used the AIaaS platform, which would be your team's PRIMARY context?" required>
             <RadioGroup options={[WORK_TYPES[0], WORK_TYPES[1]]} value={form.primaryContext} onChange={(v) => set('primaryContext', v)} />
           </Question>
         )}
-        <Question label="Does your team currently use, train, deploy, fine-tune, or integrate AI models?" required>
+        <Question id="q-aiMaturity" error={hasError('q-aiMaturity')} label="Does your team currently use, train, deploy, fine-tune, or integrate AI models?" required>
           <RadioGroup options={AI_MATURITY} value={form.aiMaturity} onChange={(v) => set('aiMaturity', v)} />
         </Question>
       </Section>
 
       <Section title="B · What you need">
-        <Question label="What type of data, model, or AI service do you need most? (select all)" required>
+        <Question id="q-needTags" error={hasError('q-needTags')} label="What type of data, model, or AI service do you need most? (select all)" required>
           <CheckboxGroup options={NEED_OPTIONS} values={form.needTags} onChange={(v) => set('needTags', v)} />
         </Question>
       </Section>
 
       <Section title="C · Current alternatives">
-        <Question label="Which platforms or alternatives have you tried or seriously considered? (select all)" required>
+        <Question id="q-competitors" error={hasError('q-competitors')} label="Which platforms or alternatives have you tried or seriously considered? (select all)" required>
           <CheckboxGroup options={COMPETITOR_OPTIONS} values={form.competitors} onChange={(v) => set('competitors', v)} />
         </Question>
         <Question label="What problems have you experienced with these alternatives? (select all)">
@@ -197,7 +235,7 @@ export function InterviewForm({ onSubmit }: InterviewFormProps) {
       </Section>
 
       <Section title="D · Cost">
-        <Question label="How significant is COST as a barrier to your team's use of AI models, datasets, APIs, cloud, or inference?" required>
+        <Question id="q-costRating" error={hasError('q-costRating')} label="How significant is COST as a barrier to your team's use of AI models, datasets, APIs, cloud, or inference?" required>
           <Scale labels={BARRIER_SCALE} value={form.costRating} onChange={(v) => set('costRating', v)} />
         </Question>
         <Question label="Which cost issues affect you? (select all)">
@@ -206,7 +244,7 @@ export function InterviewForm({ onSubmit }: InterviewFormProps) {
       </Section>
 
       <Section title="E · Technical complexity">
-        <Question label="How significant is TECHNICAL COMPLEXITY as a barrier for your team?" required>
+        <Question id="q-techRating" error={hasError('q-techRating')} label="How significant is TECHNICAL COMPLEXITY as a barrier for your team?" required>
           <Scale labels={BARRIER_SCALE} value={form.techRating} onChange={(v) => set('techRating', v)} />
         </Question>
         <Question label="Which technical barriers affect you? (select all)">
@@ -215,7 +253,7 @@ export function InterviewForm({ onSubmit }: InterviewFormProps) {
       </Section>
 
       <Section title="F · Localization">
-        <Question label="How significant is the lack of localized / Philippine-relevant datasets or models as a barrier?" required>
+        <Question id="q-locRating" error={hasError('q-locRating')} label="How significant is the lack of localized / Philippine-relevant datasets or models as a barrier?" required>
           <Scale labels={BARRIER_SCALE} value={form.locRating} onChange={(v) => set('locRating', v)} />
         </Question>
         <Question label="Which localization gaps do you experience? (select all)">
@@ -224,7 +262,7 @@ export function InterviewForm({ onSubmit }: InterviewFormProps) {
       </Section>
 
       <Section title="G · AIaaS value">
-        <Question label="How useful would a localized AI repository + AI-as-a-Service platform (datasets, models, APIs, inference) be for your team?" required>
+        <Question id="q-uvpRating" error={hasError('q-uvpRating')} label="How useful would a localized AI repository + AI-as-a-Service platform (datasets, models, APIs, inference) be for your team?" required>
           <Scale labels={USEFULNESS_SCALE} value={form.uvpRating} onChange={(v) => set('uvpRating', v)} />
         </Question>
         <Question label="Which AIaaS features would be valuable? (select all)">
@@ -233,13 +271,13 @@ export function InterviewForm({ onSubmit }: InterviewFormProps) {
       </Section>
 
       <Section title="H · Adoption intent">
-        <Question label="If the AIaaS platform were available, how likely would your team be to try it?" required>
+        <Question id="q-likelihood" error={hasError('q-likelihood')} label="If the AIaaS platform were available, how likely would your team be to try it?" required>
           <RadioGroup options={LIKELIHOOD_OPTIONS} value={form.likelihood} onChange={(v) => set('likelihood', v)} />
         </Question>
-        <Question label="What is the most realistic way your team would use the AIaaS platform first?" required>
+        <Question id="q-firstUse" error={hasError('q-firstUse')} label="What is the most realistic way your team would use the AIaaS platform first?" required>
           <RadioGroup options={FIRST_USE_OPTIONS} value={form.firstUse} onChange={(v) => set('firstUse', v)} />
         </Question>
-        <Question label="How soon would your team be willing to try the AIaaS platform?" required>
+        <Question id="q-timeframe" error={hasError('q-timeframe')} label="How soon would your team be willing to try the AIaaS platform?" required>
           <RadioGroup options={TIMEFRAME_OPTIONS} value={form.timeframe} onChange={(v) => set('timeframe', v)} />
         </Question>
         <Question label="What would prevent your team from using the AIaaS platform? (select all)">
@@ -259,7 +297,7 @@ export function InterviewForm({ onSubmit }: InterviewFormProps) {
       )}
 
       <Section title="J · Contact">
-        <Question label="May DOST-NAIRA contact you for follow-up or pilot coordination?" required>
+        <Question id="q-contact" error={hasError('q-contact')} label="May DOST-NAIRA contact you for follow-up or pilot coordination?" required>
           <RadioGroup
             options={['Yes, I agree to be contacted', 'No, I prefer not to be contacted']}
             value={
@@ -293,8 +331,24 @@ export function InterviewForm({ onSubmit }: InterviewFormProps) {
       </Section>
 
       {showErrors && missing.length > 0 && (
-        <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
-          Please answer the required questions: {missing.join(', ')}.
+        <div role="alert" className="p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700 space-y-2">
+          <p className="font-medium">
+            {missing.length === 1
+              ? '1 question still needs an answer. Tap it to jump there:'
+              : `${missing.length} questions still need an answer. Tap one to jump there:`}
+          </p>
+          <div className="flex flex-wrap gap-1.5">
+            {missing.map((m, i) => (
+              <button
+                key={`${m.id}-${i}`}
+                type="button"
+                onClick={() => scrollToQuestion(m.id)}
+                className="rounded-full border border-red-300 bg-white px-2.5 py-1 text-xs font-medium text-red-700 hover:bg-red-100 transition"
+              >
+                {m.label}
+              </button>
+            ))}
+          </div>
         </div>
       )}
 
