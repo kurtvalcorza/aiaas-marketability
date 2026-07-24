@@ -35,6 +35,7 @@ export const dviScoresSchema = z.object({
   technicalComplexity: scoreSchema,
   localizationGap: scoreSchema,
   uvpResonance: scoreSchema,
+  governanceResonance: scoreSchema,
 });
 
 const tagArraySchema = z.array(z.string().max(I.MAX_TAG_LENGTH)).max(I.MAX_TAGS);

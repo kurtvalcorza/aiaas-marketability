@@ -10,7 +10,7 @@ Built on the ai-readiness-assessment template's infrastructure (streaming chat, 
 
 The interview is a two-phase hybrid. **The app owns all structured data and all scoring; the language model never computes a score.**
 
-1. **Structured form** ([`components/InterviewForm.tsx`](components/InterviewForm.tsx)) — routing questions, tag pickers, and the four **0–5 self-ratings** (Cost, Technical complexity, Localization gap, UVP usefulness). On submit, [`formToInterviewCore()`](lib/questions.ts) derives the segment vector and AD overlay, computes the DVI deterministically from the ratings, and merges the component sub-friction tags into the friction list.
+1. **Structured form** ([`components/InterviewForm.tsx`](components/InterviewForm.tsx)) — routing questions, tag pickers, and the five **0–5 self-ratings** (Cost, Technical complexity, Localization gap, UVP usefulness, Governance resonance). On submit, [`formToInterviewCore()`](lib/questions.ts) derives the segment vector and AD overlay, computes the DVI deterministically from the ratings, and merges the component sub-friction tags into the friction list.
 2. **Reconciling chat** ([`hooks/useInterviewFlow.ts`](hooks/useInterviewFlow.ts) + [`lib/systemPrompt.ts`](lib/systemPrompt.ts)) — a brief, focused conversation that does only three things:
    - asks the one **open-ended** question ("what's the main problem you're trying to solve?"),
    - **reconciles contradictions** between a rating and the tags selected (e.g. Cost rated 0 but three cost problems ticked),
@@ -38,11 +38,11 @@ Respondents who answer "both" or "not sure" for their work type get a primary-co
 ## Demand Viability Index
 
 ```
-Base (Basic): DVI    = 0.30·C + 0.25·T + 0.25·L + 0.20·U
-AD:           DVI_AD = 0.40·C + 0.10·T + 0.30·L + 0.20·U      range 0.00–5.00
+Base (Basic): DVI    = 0.25·C + 0.20·T + 0.25·L + 0.15·U + 0.15·G
+AD:           DVI_AD = 0.35·C + 0.10·T + 0.25·L + 0.15·U + 0.15·G   range 0.00–5.00
 ```
 
-C = Cost Barrier · T = Technical Complexity · L = Localization Gap · U = UVP Resonance. AD reduces the T weight (advanced teams aren't blocked by skill) and reallocates it to Cost and Localization. Each component is a **respondent 0–5 self-rating**; the DVI is **recomputed deterministically in code** ([`lib/dvi.ts`](lib/dvi.ts)) using the route's overlay weights, so the stored value is auditable and never depends on the model's arithmetic.
+C = Cost Barrier · T = Technical Complexity · L = Localization Gap · U = UVP Resonance · G = Governance Resonance. AD reduces the T weight (advanced teams aren't blocked by skill) and reallocates it mainly to Cost; G is weighted equally across overlays (methodology **v2** — prior four-component records keep their original DVI and are never recomputed). Each component is a **respondent 0–5 self-rating**; the DVI is **recomputed deterministically in code** ([`lib/dvi.ts`](lib/dvi.ts)) using the route's overlay weights, so the stored value is auditable and never depends on the model's arithmetic.
 
 The scale floor is **0** ("not a barrier" / "not useful"), which makes the "Weak" band reachable.
 
@@ -50,7 +50,7 @@ The scale floor is **0** ("not a barrier" / "not useful"), which makes the "Weak
 
 ## What the form collects
 
-**Every respondent** (form): organization type, current work, AI maturity, what they need, alternatives tried, friction with alternatives, the four DVI 0–5 ratings (each with an optional sub-friction tag picker), likelihood to try, first-use pathway, timeframe, adoption blockers, and a contact-consent choice.
+**Every respondent** (form): organization type, current work, AI maturity, what they need, alternatives tried, friction with alternatives, the five DVI 0–5 ratings (each with an optional sub-friction tag picker), likelihood to try, first-use pathway, timeframe, adoption blockers, and a contact-consent choice.
 
 **Advanced Demand respondents** additionally answer: their current AI-related work and their most significant remaining pain points.
 

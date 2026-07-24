@@ -64,6 +64,12 @@ describe('buildCsv', () => {
     }
   });
 
+  it('exports the governance component and methodology version', () => {
+    for (const col of ['governance_resonance_score_g', 'dvi_model_version', 'llm_inferred_governance_g']) {
+      expect(EXPORT_COLUMNS).toContain(col);
+    }
+  });
+
   it('serializes a JSONB-as-text cell without "[object Object]"', () => {
     // The export SELECT casts JSONB to text, so buildCsv receives a string.
     const rows = [{ assessment_id: 1, themes: '["cost","localization"]' }];

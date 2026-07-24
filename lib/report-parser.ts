@@ -21,6 +21,7 @@ export const RERATE_FIELD: Record<RerateComponent, keyof DVIScores> = {
   technical: 'technicalComplexity',
   localization: 'localizationGap',
   uvp: 'uvpResonance',
+  governance: 'governanceResonance',
 };
 
 /** Returns the re-rate component requested in the text, or null. */

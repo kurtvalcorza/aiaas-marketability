@@ -1,9 +1,14 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+
+const { mockSql } = vi.hoisted(() => ({ mockSql: vi.fn() }));
+vi.mock('@neondatabase/serverless', () => ({ neon: vi.fn(() => mockSql) }));
+
 import {
   bandForDvi,
   BAND_COLORS,
   VECTOR_LABELS,
   OVERLAY_LABELS,
+  fetchDashboardData,
 } from '@/lib/dashboard-data';
 
 describe('bandForDvi', () => {
@@ -36,5 +41,34 @@ describe('code labels', () => {
   it('labels both maturity overlays', () => {
     expect(OVERLAY_LABELS.basic).toBeTruthy();
     expect(OVERLAY_LABELS.AD).toBeTruthy();
+  });
+});
+
+describe('fetchDashboardData', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    process.env.DATABASE_URL = 'postgresql://user:pass@host/db';
+  });
+  afterEach(() => {
+    delete process.env.DATABASE_URL;
+  });
+
+  it('reads avg_governance_resonance into overall.avgGovernanceResonance', async () => {
+    mockSql
+      .mockResolvedValueOnce([
+        {
+          interviews: 10, avg_dvi: '3.10', avg_cost_barrier: '3', avg_technical_complexity: '2',
+          avg_localization_gap: '3', avg_uvp_resonance: '3', avg_governance_resonance: '3.40',
+          contact_consented: 4, latest_submission: '2026-07-24T00:00:00Z',
+        },
+      ])
+      .mockResolvedValueOnce([]) // dvi_by_vector
+      .mockResolvedValueOnce([]) // dvi_by_overlay
+      .mockResolvedValueOnce([]) // dvi_by_route
+      .mockResolvedValueOnce([]) // dvi_band_distribution
+      .mockResolvedValueOnce([{ interviews: 10, workbench_interested: 2, workbench_interest_pct: '20.0' }]);
+
+    const data = await fetchDashboardData();
+    expect(data.overall.avgGovernanceResonance).toBe(3.4);
   });
 });

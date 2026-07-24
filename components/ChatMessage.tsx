@@ -25,6 +25,7 @@ const COMPONENT_LABEL: Record<RerateComponent, string> = {
   technical: 'Technical Complexity',
   localization: 'Localization Gap',
   uvp: 'AIaaS usefulness',
+  governance: 'Governance resonance',
 };
 
 function rawText(message: UIMessage): string {
@@ -42,7 +43,7 @@ function RerateControl({
   onRerate?: (component: RerateComponent, value: number) => void;
 }) {
   const [picked, setPicked] = useState<number | null>(null);
-  const labels = component === 'uvp' ? USEFULNESS_SCALE : BARRIER_SCALE;
+  const labels = component === 'uvp' || component === 'governance' ? USEFULNESS_SCALE : BARRIER_SCALE;
 
   if (picked !== null) {
     return (

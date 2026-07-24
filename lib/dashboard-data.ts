@@ -14,6 +14,7 @@ export interface OverallStats {
   avgTechnicalComplexity: number | null;
   avgLocalizationGap: number | null;
   avgUvpResonance: number | null;
+  avgGovernanceResonance: number | null;
   contactConsented: number;
   latestSubmission: string | null;
 }
@@ -65,7 +66,8 @@ export async function fetchDashboardData(): Promise<DashboardData> {
   const [overallRows, vectorRows, overlayRows, routeRows, bandRows, workbenchRows] =
     await Promise.all([
       sql`SELECT interviews, avg_dvi, avg_cost_barrier, avg_technical_complexity,
-                 avg_localization_gap, avg_uvp_resonance, contact_consented, latest_submission
+                 avg_localization_gap, avg_uvp_resonance, avg_governance_resonance,
+                 contact_consented, latest_submission
           FROM dvi_overall`,
       sql`SELECT segment_vector AS key, interviews, avg_dvi FROM dvi_by_vector ORDER BY segment_vector`,
       sql`SELECT ai_maturity_overlay AS key, interviews, avg_dvi FROM dvi_by_overlay ORDER BY ai_maturity_overlay`,
@@ -82,6 +84,7 @@ export async function fetchDashboardData(): Promise<DashboardData> {
     avgTechnicalComplexity: num(o.avg_technical_complexity),
     avgLocalizationGap: num(o.avg_localization_gap),
     avgUvpResonance: num(o.avg_uvp_resonance),
+    avgGovernanceResonance: num(o.avg_governance_resonance),
     contactConsented: int(o.contact_consented),
     latestSubmission: o.latest_submission ? String(o.latest_submission) : null,
   };

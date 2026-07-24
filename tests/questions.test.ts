@@ -13,6 +13,7 @@ import {
   FRICTION_OPTIONS,
   COST_TAG_OPTIONS,
   LOCAL_TAG_OPTIONS,
+  GOV_TAG_OPTIONS,
   FEATURE_OPTIONS,
   LIKELIHOOD_OPTIONS,
   FIRST_USE_OPTIONS,
@@ -23,7 +24,7 @@ import {
   ORG_TYPES,
 } from '@/lib/questions';
 
-// RR-AD example. Scores C5/T2/L5/U4 -> AD DVI = 0.4*5+0.1*2+0.3*5+0.2*4 = 4.5
+// RR-AD example. Scores C5/T2/L5/U4/G3 -> AD DVI = 0.35*5+0.10*2+0.25*5+0.15*4+0.15*3 = 4.25
 function sampleForm(): FormState {
   return {
     ...emptyForm(),
@@ -40,6 +41,8 @@ function sampleForm(): FormState {
     locTags: [LOCAL_TAG_OPTIONS[0]],
     uvpRating: 4,
     featureTags: [FEATURE_OPTIONS[0]],
+    govRating: 3,
+    govTags: [GOV_TAG_OPTIONS[0]],
     likelihood: LIKELIHOOD_OPTIONS[4],
     firstUse: FIRST_USE_OPTIONS[0],
     timeframe: TIMEFRAME_OPTIONS[1],
@@ -86,8 +89,9 @@ describe('formToInterviewCore', () => {
       technicalComplexity: 2,
       localizationGap: 5,
       uvpResonance: 4,
+      governanceResonance: 3,
     });
-    expect(core.dvi).toBe(4.5);
+    expect(core.dvi).toBe(4.25);
     expect(core.interpretation).toBe('Strong demand signal');
   });
 
@@ -97,6 +101,7 @@ describe('formToInterviewCore', () => {
       FRICTION_OPTIONS[0],
       COST_TAG_OPTIONS[1],
       LOCAL_TAG_OPTIONS[0],
+      GOV_TAG_OPTIONS[0],
       AD_PAIN_OPTIONS[0],
     ]);
   });

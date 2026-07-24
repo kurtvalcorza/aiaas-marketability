@@ -129,6 +129,16 @@ export const LOCAL_TAG_OPTIONS = [
   'Foreign platforms do not fit our use case',
 ] as const;
 
+/** Governance sub-factor tags (G). Evidence only — never feed the numeric score. */
+export const GOV_TAG_OPTIONS = [
+  'Data residency / on-shore hosting',
+  'Data ownership & IP retention',
+  'Public-sector / DOST alignment',
+  'Avoiding vendor lock-in',
+  'Auditability & transparency',
+  'Local accountability / support',
+] as const;
+
 export const FEATURE_OPTIONS = [
   'Localized datasets',
   'Pre-cleaned and documented datasets',
@@ -238,6 +248,8 @@ export interface FormState {
   locTags: string[];
   uvpRating: number;
   featureTags: string[];
+  govRating: number;
+  govTags: string[];
   likelihood: string;
   firstUse: string;
   timeframe: string;
@@ -259,6 +271,7 @@ export function emptyForm(): FormState {
     needTags: [], competitors: [], frictionTags: [],
     costRating: -1, costTags: [], techRating: -1, techTags: [],
     locRating: -1, locTags: [], uvpRating: -1, featureTags: [],
+    govRating: -1, govTags: [],
     likelihood: '', firstUse: '', timeframe: '', blockers: [],
     aiWork: [], adPain: [],
     contactAnswered: false, contactConsent: false, contactName: '', contactEmail: '',
@@ -308,6 +321,7 @@ export function buildFormContext(form: FormState): string {
     `Technical rating: ${form.techRating}/5. Technical barriers ticked: ${list(form.techTags)}.`,
     `Localization rating: ${form.locRating}/5. Localization gaps ticked: ${list(form.locTags)}.`,
     `UVP usefulness rating: ${form.uvpRating}/5. Valued features: ${list(form.featureTags)}.`,
+    `Governance resonance rating: ${form.govRating}/5. Governance factors ticked: ${list(form.govTags)}.`,
     `Competitors tried: ${list(form.competitors)}. General friction: ${list(form.frictionTags)}.`,
     `Needs: ${list(form.needTags)}. Likelihood: ${form.likelihood}. First use: ${form.firstUse}. Timeframe: ${form.timeframe}. Blockers: ${list(form.blockers)}.`,
   ];
@@ -330,6 +344,7 @@ export function formToInterviewCore(form: FormState): InterviewCore {
     technicalComplexity: form.techRating,
     localizationGap: form.locRating,
     uvpResonance: form.uvpRating,
+    governanceResonance: form.govRating,
   };
   const dvi = computeDVI(scores, overlay);
 
@@ -339,6 +354,7 @@ export function formToInterviewCore(form: FormState): InterviewCore {
     ...form.costTags,
     ...form.techTags,
     ...form.locTags,
+    ...form.govTags,
     ...(overlay === 'AD' ? form.adPain : []),
   ]);
 

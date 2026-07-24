@@ -54,6 +54,8 @@ export interface DVIScores {
   localizationGap: number;
   /** U — usefulness of / resonance with the AIaaS platform's value proposition */
   uvpResonance: number;
+  /** G — resonance with local / sovereign AI governance (data residency, ownership, public-sector fit) */
+  governanceResonance: number;
 }
 
 /**
@@ -130,7 +132,9 @@ export interface InterviewRecord {
   technicalComplexity: number;
   localizationGap: number;
   uvpResonance: number;
+  governanceResonance: number;
   dvi: number;
+  dviModelVersion: string;
   interpretation: string;
   likelihoodToTry: string;
   firstUsePathway: string;

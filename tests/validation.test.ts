@@ -37,7 +37,7 @@ describe('Validation utilities', () => {
       mainProblem: 'Lower-cost localized inference',
       needTags: ['Localized datasets'], competitors: 'AWS; Azure',
       frictionTags: ['cost'], useCaseTags: ['Secure or local inference option'],
-      scores: { costBarrier: 5, technicalComplexity: 2, localizationGap: 5, uvpResonance: 4 },
+      scores: { costBarrier: 5, technicalComplexity: 2, localizationGap: 5, uvpResonance: 4, governanceResonance: 4 },
       dvi: 4.5, interpretation: 'Strong demand signal',
       likelihoodToTry: 'Very likely', firstUsePathway: 'Explore datasets', timeframe: 'Immediately',
       adoptionBlockers: 'No relevant datasets',
@@ -66,6 +66,13 @@ describe('Validation utilities', () => {
     it('rejects a score above 5 or below 0', () => {
       expect(() => validateInterviewData({ ...validData, scores: { ...validData.scores, costBarrier: 6 } })).toThrow('Validation failed');
       expect(() => validateInterviewData({ ...validData, scores: { ...validData.scores, costBarrier: -1 } })).toThrow('Validation failed');
+    });
+
+    it('requires governanceResonance and enforces its 0-5 range', () => {
+      expect(() => validateInterviewData({ ...validData, scores: { ...validData.scores, governanceResonance: 6 } })).toThrow('Validation failed');
+      const withoutG: Record<string, number> = { ...validData.scores };
+      delete withoutG.governanceResonance;
+      expect(() => validateInterviewData({ ...validData, scores: withoutG })).toThrow('Validation failed');
     });
 
     it('rejects a missing scores object', () => {

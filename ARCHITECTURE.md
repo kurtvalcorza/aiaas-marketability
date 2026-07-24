@@ -22,7 +22,7 @@
 
 The **AIaaS Demand Viability Index (DVI) Chatbot** (`aiaas-marketability`) is a Next.js application that runs a two-phase **marketability and demand-validation instrument** ("form + reconciling chat") for a localized AI repository and AI-as-a-Service (AIaaS) platform under the DOST-NAIRA project. A structured form collects routing, tag selections, adoption intent, and the four **0.0–5.0 component self-ratings**; a short chat then handles the one open-ended question, contradiction reconciliation, any Advanced-Demand follow-up, and the visible summary. The app routes the respondent through the RR/DD matrix with an AI-maturity overlay, gathers competitor-friction and value-proposition evidence, and computes a study-specific **Demand Viability Index (DVI)**.
 
-**The app owns all structured data and all scoring; the language model never computes or assigns a score.** The four DVI components are the respondent's own self-ratings from the form.
+**The app owns all structured data and all scoring; the language model never computes or assigns a score.** The five DVI components are the respondent's own self-ratings from the form.
 
 This is explicitly **NOT a readiness assessment**, and the DVI is a study-specific operational index — not a formal validated scale, certification, or proof of market demand. It was built from the `ai-readiness-assessment` template, so one internal plumbing name is retained (the `AssessmentComplete` component); this document describes it by its current function.
 
@@ -54,16 +54,17 @@ AD is not a separate market; it is an overlay detected within RR or DD (the form
 
 ### The Demand Viability Index (DVI)
 
-Each of the four components is the respondent's own **0.0–5.0 self-rating**, collected directly by the form — the model never computes, assigns, or narrates a score. The DVI is **computed deterministically in code** (`lib/dvi.ts`) from those self-ratings so the stored value is auditable rather than dependent on the model's arithmetic:
+Each of the five components is the respondent's own **0.0–5.0 self-rating**, collected directly by the form — the model never computes, assigns, or narrates a score. The DVI is **computed deterministically in code** (`lib/dvi.ts`) from those self-ratings so the stored value is auditable rather than dependent on the model's arithmetic:
 
 | Component | Symbol | Base weight | AD-adjusted weight |
 | --- | --- | --- | --- |
-| Cost Barrier | C | 0.30 | 0.40 |
-| Technical Complexity | T | 0.25 | 0.10 |
-| Localization Gap | L | 0.25 | 0.30 |
-| UVP Resonance | U | 0.20 | 0.20 |
+| Cost Barrier | C | 0.25 | 0.35 |
+| Technical Complexity | T | 0.20 | 0.10 |
+| Localization Gap | L | 0.25 | 0.25 |
+| UVP Resonance | U | 0.15 | 0.15 |
+| Governance Resonance | G | 0.15 | 0.15 |
 
-For AD respondents (who already use/deploy AI), Technical Complexity is de-emphasized and its weight reallocated to Cost Barrier and Localization Gap. Each weight set sums to 1.0. Scores are clamped to `[0.0, 5.0]` before weighting; a non-finite score collapses to the minimum so it cannot inflate demand. The scale floor is **0** ("not a barrier" / "not useful"), which makes the "Weak" band reachable.
+For AD respondents (who already use/deploy AI), Technical Complexity is de-emphasized and its weight reallocated mainly to Cost Barrier; Governance Resonance (G) is weighted equally across overlays so the collected ratings — not the weights — reveal whether AD teams value governance more. Each weight set sums to 1.0. This five-component model is methodology **v2** (`dvi_model_version`); records collected under the four-component **v1** model keep their original DVI and are never recomputed. See `specs/001-governance-dimension/` and `docs/specs/governance-dimension.md`. Scores are clamped to `[0.0, 5.0]` before weighting; a non-finite score collapses to the minimum so it cannot inflate demand. The scale floor is **0** ("not a barrier" / "not useful"), which makes the "Weak" band reachable.
 
 The resulting DVI (`0.00`–`5.00`) maps to one of four interpretation bands (`interpretDVI`):
 
@@ -76,7 +77,7 @@ The resulting DVI (`0.00`–`5.00`) maps to one of four interpretation bands (`i
 
 ### Respondent-facing vs. internal fields (FR-064)
 
-The model's final message contains a **visible respondent summary** (heading `## Your AIaaS Demand Summary`), then a `###FIELDS###` block (a single line, `Main Problem: ...`), then a `###INTERVIEW_COMPLETE###` marker. `lib/report-parser.ts` shows the respondent only the visible summary and strips the FIELDS block, the marker, and any `[[RERATE:x]]` directives. The four component scores and the DVI are computed and displayed by the app — never emitted or narrated by the model — and contact details never appear in the chat UI.
+The model's final message contains a **visible respondent summary** (heading `## Your AIaaS Demand Summary`), then a `###FIELDS###` block (a single line, `Main Problem: ...`), then a `###INTERVIEW_COMPLETE###` marker. `lib/report-parser.ts` shows the respondent only the visible summary and strips the FIELDS block, the marker, and any `[[RERATE:x]]` directives. The five component scores and the DVI are computed and displayed by the app — never emitted or narrated by the model — and contact details never appear in the chat UI.
 
 ## Architecture Principles
 
@@ -225,7 +226,7 @@ aiaas-marketability/
 │   ├── ConsentBanner.tsx         # Privacy consent banner
 │   ├── ErrorAlert.tsx            # Error notifications
 │   ├── ErrorBoundary.tsx         # Error boundary component
-│   ├── InterviewForm.tsx         # Phase 1: structured form (routing, tags, four 0–5 ratings)
+│   ├── InterviewForm.tsx         # Phase 1: structured form (routing, tags, five 0–5 ratings)
 │   └── LoadingIndicator.tsx      # Loading animation
 │
 ├── hooks/                        # Custom React hooks
@@ -367,7 +368,7 @@ export async function submitToGoogleSheets(
 ```
 1. Form phase (InterviewForm)
    │
-   ├─> Respondent answers routing, tag pickers, and the four 0–5 self-ratings
+   ├─> Respondent answers routing, tag pickers, and the five 0–5 self-ratings
    │
    ├─> useInterviewFlow.startChat(form)
    │   ├─> formToInterviewCore(form): derives segment + AD overlay, computes the

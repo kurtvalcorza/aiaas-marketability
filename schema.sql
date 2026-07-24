@@ -24,8 +24,12 @@ CREATE TABLE IF NOT EXISTS aiaas_market_analysis (
   technical_complexity_score_t  NUMERIC(3,1) NOT NULL CHECK (technical_complexity_score_t BETWEEN 0 AND 5),
   localization_gap_score_l      NUMERIC(3,1) NOT NULL CHECK (localization_gap_score_l BETWEEN 0 AND 5),
   uvp_resonance_score_u         NUMERIC(3,1) NOT NULL CHECK (uvp_resonance_score_u BETWEEN 0 AND 5),
+  -- Governance Resonance (G): 5th component (methodology v2). NULLABLE on purpose —
+  -- pre-v2 rows have no value, and NULL must read as "not collected", never as 0.
+  governance_resonance_score_g  NUMERIC(3,1) CHECK (governance_resonance_score_g BETWEEN 0 AND 5),
   -- Weighted Demand Viability Index, 0.00-5.00 (AD routes use AD-adjusted weights)
   dvi_score                     NUMERIC(3,2) NOT NULL CHECK (dvi_score BETWEEN 0 AND 5),
+  dvi_model_version             TEXT         NOT NULL DEFAULT 'v1',  -- 'v1'=4 components; 'v2'=5 (adds G)
   interpretation                TEXT,
   likelihood_to_try             TEXT,
   first_use_pathway             TEXT,
@@ -55,7 +59,8 @@ CREATE TABLE IF NOT EXISTS aiaas_market_analysis (
   llm_inferred_technical_t      NUMERIC(3,1) CHECK (llm_inferred_technical_t     BETWEEN 0 AND 5),
   llm_inferred_localization_l   NUMERIC(3,1) CHECK (llm_inferred_localization_l  BETWEEN 0 AND 5),
   llm_inferred_uvp_u            NUMERIC(3,1) CHECK (llm_inferred_uvp_u           BETWEEN 0 AND 5),
-  llm_inferred_rationale        JSONB,   -- {cost,technical,localization,uvp: string}
+  llm_inferred_governance_g     NUMERIC(3,1) CHECK (llm_inferred_governance_g    BETWEEN 0 AND 5),
+  llm_inferred_rationale        JSONB,   -- {cost,technical,localization,uvp,governance: string}
   suggested_need_tags           TEXT,    -- '; '-joined
   suggested_friction_tags       TEXT,    -- '; '-joined
   suggested_use_case_tags       TEXT     -- '; '-joined
@@ -65,6 +70,11 @@ CREATE TABLE IF NOT EXISTS aiaas_market_analysis (
 -- already get these from the CREATE TABLE above; this block upgrades a table
 -- created before the enrichment pass without dropping it.
 ALTER TABLE aiaas_market_analysis
+  ADD COLUMN IF NOT EXISTS governance_resonance_score_g NUMERIC(3,1)
+    CHECK (governance_resonance_score_g BETWEEN 0 AND 5),
+  ADD COLUMN IF NOT EXISTS dvi_model_version            TEXT NOT NULL DEFAULT 'v1',
+  ADD COLUMN IF NOT EXISTS llm_inferred_governance_g    NUMERIC(3,1)
+    CHECK (llm_inferred_governance_g BETWEEN 0 AND 5),
   ADD COLUMN IF NOT EXISTS enrichment_status TEXT NOT NULL DEFAULT 'pending'
     CHECK (enrichment_status IN ('pending','ok','failed','skipped')),
   ADD COLUMN IF NOT EXISTS enrichment_model            TEXT,
@@ -99,7 +109,8 @@ SELECT
   ROUND(AVG(cost_barrier_score_c), 2)          AS avg_cost_barrier,
   ROUND(AVG(technical_complexity_score_t), 2)  AS avg_technical_complexity,
   ROUND(AVG(localization_gap_score_l), 2)      AS avg_localization_gap,
-  ROUND(AVG(uvp_resonance_score_u), 2)         AS avg_uvp_resonance
+  ROUND(AVG(uvp_resonance_score_u), 2)         AS avg_uvp_resonance,
+  ROUND(AVG(governance_resonance_score_g), 2)  AS avg_governance_resonance
 FROM aiaas_market_analysis
 GROUP BY segment_vector;
 
@@ -122,6 +133,7 @@ SELECT
   ROUND(AVG(technical_complexity_score_t), 2)  AS avg_technical_complexity,
   ROUND(AVG(localization_gap_score_l), 2)      AS avg_localization_gap,
   ROUND(AVG(uvp_resonance_score_u), 2)         AS avg_uvp_resonance,
+  ROUND(AVG(governance_resonance_score_g), 2)  AS avg_governance_resonance,
   COUNT(*) FILTER (WHERE contact_consent)      AS contact_consented,
   MAX(created_at)                              AS latest_submission
 FROM aiaas_market_analysis;
@@ -190,7 +202,8 @@ SELECT final_route,
   ROUND(AVG(cost_barrier_score_c          - llm_inferred_cost_c), 2)         AS cost_gap,
   ROUND(AVG(technical_complexity_score_t  - llm_inferred_technical_t), 2)    AS technical_gap,
   ROUND(AVG(localization_gap_score_l      - llm_inferred_localization_l), 2) AS localization_gap,
-  ROUND(AVG(uvp_resonance_score_u         - llm_inferred_uvp_u), 2)          AS uvp_gap
+  ROUND(AVG(uvp_resonance_score_u         - llm_inferred_uvp_u), 2)          AS uvp_gap,
+  ROUND(AVG(governance_resonance_score_g  - llm_inferred_governance_g), 2)   AS governance_gap
 FROM aiaas_market_analysis
 WHERE enrichment_status = 'ok'
 GROUP BY final_route;
