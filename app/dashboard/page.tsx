@@ -148,6 +148,7 @@ function DashboardBody({ data }: { data: DashboardData }) {
     { label: 'Technical complexity', value: overall.avgTechnicalComplexity },
     { label: 'Localization gap', value: overall.avgLocalizationGap },
     { label: 'UVP resonance', value: overall.avgUvpResonance },
+    { label: 'Governance resonance', value: overall.avgGovernanceResonance },
   ];
 
   const vectorData = byVector.map((r) => ({
