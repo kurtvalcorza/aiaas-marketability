@@ -13,6 +13,16 @@ import {
 import { DASHBOARD_COOKIE, requireDashboardSession } from '@/lib/dashboard-auth';
 import { ScoreBarChart, BandBarChart } from '@/components/dashboard/DashboardCharts';
 import { StatCard, ChartCard } from '@/components/dashboard/DashboardUI';
+import { QUADRANTS } from '@/lib/matrix';
+
+// Demand × asset quadrant palette: Anchor is the prize cell (high demand + high
+// asset), the others cool off from there. Independent of the DVI band colours.
+const QUADRANT_COLORS: Record<string, string> = {
+  Anchor: '#16a34a', // green-600
+  Consumer: '#2563eb', // blue-600
+  Contributor: '#d97706', // amber-600
+  Peripheral: '#6b7280', // gray-500
+};
 
 // Always render fresh against the database; never cache the aggregate reads.
 export const dynamic = 'force-dynamic';
@@ -123,8 +133,15 @@ export default async function DashboardPage() {
 }
 
 function DashboardBody({ data }: { data: DashboardData }) {
-  const { overall, byVector, byOverlay, byRoute, bands, workbench } = data;
+  const { overall, byVector, byOverlay, byRoute, bands, workbench, matrix } = data;
   const overallBand = overall.avgDvi === null ? null : bandForDvi(overall.avgDvi);
+
+  // Demand × asset matrix: order the four quadrants canonically and zero-fill any
+  // absent from the aggregate so the full matrix always renders. Only respondents
+  // with the asset axis (ac_score set) are counted; pre-feature records are excluded.
+  const matrixCounts = new Map(matrix.map((m) => [m.quadrant, m.interviews]));
+  const matrixData = QUADRANTS.map((q) => ({ band: q, interviews: matrixCounts.get(q) ?? 0 }));
+  const matrixTotal = matrixData.reduce((sum, r) => sum + r.interviews, 0);
 
   const barrierData = [
     { label: 'Cost barrier', value: overall.avgCostBarrier },
@@ -181,6 +198,21 @@ function DashboardBody({ data }: { data: DashboardData }) {
           <ScoreBarChart data={barrierData} />
         </ChartCard>
       </div>
+
+      {/* Demand × asset matrix (supply axis, independent of the DVI) */}
+      <ChartCard
+        title="Demand × asset matrix"
+        subtitle="Ecosystem quadrant by (DVI ≥ 2.5) × (asset & contribution ≥ 2.5) — Anchor · Consumer · Contributor · Peripheral"
+      >
+        {matrixTotal === 0 ? (
+          <p className="py-10 text-center text-sm text-gray-500">
+            No asset-axis responses yet. Quadrants appear once interviews with an Asset &amp; Contribution
+            rating are submitted.
+          </p>
+        ) : (
+          <BandBarChart data={matrixData} colors={QUADRANT_COLORS} />
+        )}
+      </ChartCard>
 
       {/* Segment / overlay / route cuts */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">

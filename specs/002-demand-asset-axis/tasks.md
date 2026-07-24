@@ -37,3 +37,6 @@ Legend: `[P]` parallelizable. `[US1]` respondent supplies the asset signal · `[
 Foundational (T001–T006) → US1 (T007–T008) → US2 (T009–T010) → Tests (T011–T015) → Polish (T016–T019).
 
 **Totals:** 19 tasks. MVP = T001–T008 + T011–T014.
+
+## Phase 6: Convergence
+- [X] T020 Render the demand × asset matrix quadrant distribution in `app/dashboard/page.tsx` — destructure `matrix` from `data` in `DashboardBody` and add a `ChartCard` (quadrant counts, reusing the existing chart components) so the fetched `data.matrix` is surfaced where the DVI band distribution already appears, per FR-209 / SC-2 (partial: the read path was built in T009/`lib/dashboard-data.ts` but the page never renders it).
