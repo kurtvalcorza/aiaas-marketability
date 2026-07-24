@@ -5,6 +5,7 @@
 
 import { z } from 'zod';
 import { VALIDATION } from './constants/validation';
+import { QUADRANTS } from './matrix';
 
 const I = VALIDATION.INTERVIEW;
 
@@ -35,6 +36,13 @@ export const dviScoresSchema = z.object({
   technicalComplexity: scoreSchema,
   localizationGap: scoreSchema,
   uvpResonance: scoreSchema,
+  governanceResonance: scoreSchema,
+});
+
+/** Asset & Contribution sub-signals (supply axis), each a 0.0–5.0 self-rating. */
+export const assetSchema = z.object({
+  possession: scoreSchema,
+  willingness: scoreSchema,
 });
 
 const tagArraySchema = z.array(z.string().max(I.MAX_TAG_LENGTH)).max(I.MAX_TAGS);
@@ -57,7 +65,10 @@ export const interviewDataSchema = z.object({
   frictionTags: tagArraySchema,
   useCaseTags: tagArraySchema,
   scores: dviScoresSchema,
+  asset: assetSchema,
   dvi: z.number().min(I.DVI_MIN).max(I.DVI_MAX),
+  acScore: z.number().min(I.SCORE_MIN).max(I.SCORE_MAX),
+  quadrant: z.enum(QUADRANTS as unknown as [string, ...string[]]),
   interpretation: z.string().max(I.MAX_INTERPRETATION_LENGTH),
   likelihoodToTry: z.string().max(I.MAX_LIKELIHOOD_LENGTH),
   firstUsePathway: z.string().max(I.MAX_PATHWAY_LENGTH),

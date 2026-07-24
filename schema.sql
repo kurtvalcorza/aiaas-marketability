@@ -24,8 +24,18 @@ CREATE TABLE IF NOT EXISTS aiaas_market_analysis (
   technical_complexity_score_t  NUMERIC(3,1) NOT NULL CHECK (technical_complexity_score_t BETWEEN 0 AND 5),
   localization_gap_score_l      NUMERIC(3,1) NOT NULL CHECK (localization_gap_score_l BETWEEN 0 AND 5),
   uvp_resonance_score_u         NUMERIC(3,1) NOT NULL CHECK (uvp_resonance_score_u BETWEEN 0 AND 5),
+  -- Governance Resonance (G): 5th component (methodology v2). NULLABLE on purpose —
+  -- pre-v2 rows have no value, and NULL must read as "not collected", never as 0.
+  governance_resonance_score_g  NUMERIC(3,1) CHECK (governance_resonance_score_g BETWEEN 0 AND 5),
   -- Weighted Demand Viability Index, 0.00-5.00 (AD routes use AD-adjusted weights)
   dvi_score                     NUMERIC(3,2) NOT NULL CHECK (dvi_score BETWEEN 0 AND 5),
+  dvi_model_version             TEXT         NOT NULL DEFAULT 'v1',  -- 'v1'=4 components; 'v2'=5 (adds G)
+  -- Asset & Contribution axis (supply side; INDEPENDENT of the DVI). NULLABLE:
+  -- pre-feature rows have no asset axis (NULL = not collected). See lib/matrix.ts.
+  asset_possession_score        NUMERIC(3,1) CHECK (asset_possession_score BETWEEN 0 AND 5),
+  asset_willingness_score       NUMERIC(3,1) CHECK (asset_willingness_score BETWEEN 0 AND 5),
+  ac_score                      NUMERIC(3,2) CHECK (ac_score BETWEEN 0 AND 5),  -- min(possession, willingness)
+  matrix_quadrant               TEXT CHECK (matrix_quadrant IN ('Anchor','Consumer','Contributor','Peripheral')),
   interpretation                TEXT,
   likelihood_to_try             TEXT,
   first_use_pathway             TEXT,
@@ -55,7 +65,8 @@ CREATE TABLE IF NOT EXISTS aiaas_market_analysis (
   llm_inferred_technical_t      NUMERIC(3,1) CHECK (llm_inferred_technical_t     BETWEEN 0 AND 5),
   llm_inferred_localization_l   NUMERIC(3,1) CHECK (llm_inferred_localization_l  BETWEEN 0 AND 5),
   llm_inferred_uvp_u            NUMERIC(3,1) CHECK (llm_inferred_uvp_u           BETWEEN 0 AND 5),
-  llm_inferred_rationale        JSONB,   -- {cost,technical,localization,uvp: string}
+  llm_inferred_governance_g     NUMERIC(3,1) CHECK (llm_inferred_governance_g    BETWEEN 0 AND 5),
+  llm_inferred_rationale        JSONB,   -- {cost,technical,localization,uvp,governance: string}
   suggested_need_tags           TEXT,    -- '; '-joined
   suggested_friction_tags       TEXT,    -- '; '-joined
   suggested_use_case_tags       TEXT     -- '; '-joined
@@ -65,6 +76,19 @@ CREATE TABLE IF NOT EXISTS aiaas_market_analysis (
 -- already get these from the CREATE TABLE above; this block upgrades a table
 -- created before the enrichment pass without dropping it.
 ALTER TABLE aiaas_market_analysis
+  ADD COLUMN IF NOT EXISTS asset_possession_score  NUMERIC(3,1)
+    CHECK (asset_possession_score BETWEEN 0 AND 5),
+  ADD COLUMN IF NOT EXISTS asset_willingness_score NUMERIC(3,1)
+    CHECK (asset_willingness_score BETWEEN 0 AND 5),
+  ADD COLUMN IF NOT EXISTS ac_score                NUMERIC(3,2)
+    CHECK (ac_score BETWEEN 0 AND 5),
+  ADD COLUMN IF NOT EXISTS matrix_quadrant         TEXT
+    CHECK (matrix_quadrant IN ('Anchor','Consumer','Contributor','Peripheral')),
+  ADD COLUMN IF NOT EXISTS governance_resonance_score_g NUMERIC(3,1)
+    CHECK (governance_resonance_score_g BETWEEN 0 AND 5),
+  ADD COLUMN IF NOT EXISTS dvi_model_version            TEXT NOT NULL DEFAULT 'v1',
+  ADD COLUMN IF NOT EXISTS llm_inferred_governance_g    NUMERIC(3,1)
+    CHECK (llm_inferred_governance_g BETWEEN 0 AND 5),
   ADD COLUMN IF NOT EXISTS enrichment_status TEXT NOT NULL DEFAULT 'pending'
     CHECK (enrichment_status IN ('pending','ok','failed','skipped')),
   ADD COLUMN IF NOT EXISTS enrichment_model            TEXT,
@@ -90,7 +114,12 @@ ALTER TABLE aiaas_market_analysis
   ADD COLUMN IF NOT EXISTS suggested_friction_tags     TEXT,
   ADD COLUMN IF NOT EXISTS suggested_use_case_tags     TEXT;
 
--- Aggregate demand views for the researcher dashboard (a planned follow-up).
+-- Aggregate demand views for the researcher dashboard.
+-- These DVI aggregates are scoped to `dvi_model_version = 'v2'` (the current
+-- five-component methodology) so a mean/band is never averaged across two
+-- different scoring models. Records stamped with a prior methodology are
+-- excluded from these headline numbers rather than silently blended in; bump
+-- this filter when the DVI methodology is next versioned (Principle 7).
 CREATE OR REPLACE VIEW dvi_by_vector AS
 SELECT
   segment_vector,
@@ -99,18 +128,22 @@ SELECT
   ROUND(AVG(cost_barrier_score_c), 2)          AS avg_cost_barrier,
   ROUND(AVG(technical_complexity_score_t), 2)  AS avg_technical_complexity,
   ROUND(AVG(localization_gap_score_l), 2)      AS avg_localization_gap,
-  ROUND(AVG(uvp_resonance_score_u), 2)         AS avg_uvp_resonance
+  ROUND(AVG(uvp_resonance_score_u), 2)         AS avg_uvp_resonance,
+  ROUND(AVG(governance_resonance_score_g), 2)  AS avg_governance_resonance
 FROM aiaas_market_analysis
+WHERE dvi_model_version = 'v2'
 GROUP BY segment_vector;
 
 CREATE OR REPLACE VIEW dvi_by_overlay AS
 SELECT ai_maturity_overlay, COUNT(*) AS interviews, ROUND(AVG(dvi_score), 2) AS avg_dvi
 FROM aiaas_market_analysis
+WHERE dvi_model_version = 'v2'
 GROUP BY ai_maturity_overlay;
 
 CREATE OR REPLACE VIEW dvi_by_route AS
 SELECT final_route, COUNT(*) AS interviews, ROUND(AVG(dvi_score), 2) AS avg_dvi
 FROM aiaas_market_analysis
+WHERE dvi_model_version = 'v2'
 GROUP BY final_route;
 
 -- Overall rollup: one row summarising the whole dataset for the KPI header.
@@ -122,9 +155,11 @@ SELECT
   ROUND(AVG(technical_complexity_score_t), 2)  AS avg_technical_complexity,
   ROUND(AVG(localization_gap_score_l), 2)      AS avg_localization_gap,
   ROUND(AVG(uvp_resonance_score_u), 2)         AS avg_uvp_resonance,
+  ROUND(AVG(governance_resonance_score_g), 2)  AS avg_governance_resonance,
   COUNT(*) FILTER (WHERE contact_consent)      AS contact_consented,
   MAX(created_at)                              AS latest_submission
-FROM aiaas_market_analysis;
+FROM aiaas_market_analysis
+WHERE dvi_model_version = 'v2';
 
 -- DVI band distribution (Weak <1.5, Limited 1.5-2.5, Moderate 2.5-3.5, Strong >=3.5).
 -- sort_order keeps the bands in ascending strength for charting; empty bands are
@@ -142,6 +177,7 @@ scored AS (
       ELSE 'Strong'
     END AS band
   FROM aiaas_market_analysis
+  WHERE dvi_model_version = 'v2'
 )
 SELECT b.band, b.sort_order, COUNT(s.band) AS interviews
 FROM bands b
@@ -190,7 +226,8 @@ SELECT final_route,
   ROUND(AVG(cost_barrier_score_c          - llm_inferred_cost_c), 2)         AS cost_gap,
   ROUND(AVG(technical_complexity_score_t  - llm_inferred_technical_t), 2)    AS technical_gap,
   ROUND(AVG(localization_gap_score_l      - llm_inferred_localization_l), 2) AS localization_gap,
-  ROUND(AVG(uvp_resonance_score_u         - llm_inferred_uvp_u), 2)          AS uvp_gap
+  ROUND(AVG(uvp_resonance_score_u         - llm_inferred_uvp_u), 2)          AS uvp_gap,
+  ROUND(AVG(governance_resonance_score_g  - llm_inferred_governance_g), 2)   AS governance_gap
 FROM aiaas_market_analysis
 WHERE enrichment_status = 'ok'
 GROUP BY final_route;
@@ -209,3 +246,21 @@ CREATE OR REPLACE VIEW enrichment_coverage AS
 SELECT enrichment_status, COUNT(*) AS interviews
 FROM aiaas_market_analysis
 GROUP BY enrichment_status;
+
+-- ── Demand × Asset matrix (feature 002) ──────────────────────────────────────
+-- Quadrant counts across respondents who have the asset axis (ac_score set).
+-- Anchor = high demand + high asset (seed + consume); Consumer = high demand,
+-- low asset; Contributor = low demand, high asset; Peripheral = low + low.
+CREATE OR REPLACE VIEW demand_asset_matrix AS
+SELECT matrix_quadrant AS quadrant, COUNT(*) AS interviews
+FROM aiaas_market_analysis
+WHERE matrix_quadrant IS NOT NULL
+GROUP BY matrix_quadrant;
+
+-- Matrix quadrant distribution per final route (RR/DD × basic/AD).
+CREATE OR REPLACE VIEW matrix_by_route AS
+SELECT final_route, matrix_quadrant AS quadrant, COUNT(*) AS interviews
+FROM aiaas_market_analysis
+WHERE matrix_quadrant IS NOT NULL
+GROUP BY final_route, matrix_quadrant
+ORDER BY final_route, matrix_quadrant;

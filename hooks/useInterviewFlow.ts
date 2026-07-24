@@ -13,6 +13,7 @@ import { TextStreamChatTransport } from 'ai';
 import { InterviewData, UIMessage } from '@/lib/types';
 import { FormState, InterviewCore, buildFormContext, formToInterviewCore } from '@/lib/questions';
 import { computeDVI, interpretDVI } from '@/lib/dvi';
+import { classifyQuadrant } from '@/lib/matrix';
 import { sanitizeConversationHistory } from '@/lib/validation';
 import { hasAcceptedConsent } from '@/lib/consent';
 import {
@@ -87,7 +88,12 @@ export function useInterviewFlow() {
       if (!core) return;
       const scores = { ...core.scores, [RERATE_FIELD[component]]: value };
       const dvi = computeDVI(scores, core.overlay);
-      const updated: InterviewCore = { ...core, scores, dvi, interpretation: interpretDVI(dvi) };
+      // A demand re-rate can move the DVI across the 2.5 matrix cut, so the
+      // quadrant must be reclassified from the new DVI (the asset axis is
+      // unchanged) — otherwise a stale quadrant (e.g. DVI<2.5 tagged Anchor)
+      // would be persisted and corrupt the matrix counts.
+      const quadrant = classifyQuadrant(dvi, core.acScore);
+      const updated: InterviewCore = { ...core, scores, dvi, interpretation: interpretDVI(dvi), quadrant };
       coreRef.current = updated;
       setState((s) => ({ ...s, core: updated }));
       sendMessage({ text: `I've updated my ${component} rating to ${value}.` });

@@ -1,12 +1,14 @@
 /**
  * Demand Viability Index (DVI) computation.
  *
- * Base:  DVI    = (0.30·C) + (0.25·T) + (0.25·L) + (0.20·U)
- * AD:    DVI_AD = (0.40·C) + (0.10·T) + (0.30·L) + (0.20·U)
+ * Base:  DVI    = (0.25·C) + (0.20·T) + (0.25·L) + (0.15·U) + (0.15·G)
+ * AD:    DVI_AD = (0.35·C) + (0.10·T) + (0.25·L) + (0.15·U) + (0.15·G)
  *
  * For Advanced Demand (AD) respondents — who already use, train, or deploy AI —
  * Technical Complexity should not dominate, so its weight is reduced and
- * reallocated to Cost Barrier and Localization Gap. The overlay is derived from
+ * reallocated mainly to Cost Barrier. Governance Resonance (G) is weighted equally
+ * across overlays so the collected ratings, not the weights, reveal whether AD
+ * teams value governance more (methodology v2 / Scheme A). The overlay is derived from
  * the route; the DVI is always recomputed here so the stored value is
  * deterministic and auditable rather than dependent on the model's arithmetic.
  */
@@ -18,18 +20,27 @@ import { DVIScores, Overlay } from './types';
  */
 export const DVI_WEIGHTS: Record<Overlay, DVIScores> = {
   basic: {
-    costBarrier: 0.3,
-    technicalComplexity: 0.25,
+    costBarrier: 0.25,
+    technicalComplexity: 0.2,
     localizationGap: 0.25,
-    uvpResonance: 0.2,
+    uvpResonance: 0.15,
+    governanceResonance: 0.15,
   },
   AD: {
-    costBarrier: 0.4,
+    costBarrier: 0.35,
     technicalComplexity: 0.1,
-    localizationGap: 0.3,
-    uvpResonance: 0.2,
+    localizationGap: 0.25,
+    uvpResonance: 0.15,
+    governanceResonance: 0.15,
   },
 };
+
+/**
+ * Scoring-model methodology version stamped on each stored record (Constitution
+ * Principle 7). v1 = four-component model; v2 = five components incl. Governance
+ * Resonance (G). Prior records keep v1 and are never recomputed.
+ */
+export const DVI_MODEL_VERSION = 'v2' as const;
 
 /**
  * Valid range for an individual component score. Ratings are collected on a
@@ -67,7 +78,8 @@ export function computeDVI(scores: DVIScores, overlay: Overlay = 'basic'): numbe
     w.costBarrier * clampScore(scores.costBarrier) +
     w.technicalComplexity * clampScore(scores.technicalComplexity) +
     w.localizationGap * clampScore(scores.localizationGap) +
-    w.uvpResonance * clampScore(scores.uvpResonance);
+    w.uvpResonance * clampScore(scores.uvpResonance) +
+    w.governanceResonance * clampScore(scores.governanceResonance);
 
   return Math.round(raw * 100) / 100;
 }

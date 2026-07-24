@@ -1,0 +1,8 @@
+{
+  "feature": "002-demand-asset-axis",
+  "shortName": "demand-asset-axis",
+  "specPath": "specs/002-demand-asset-axis/spec.md",
+  "created": "2026-07-24",
+  "description": "Add an Asset & Contribution axis (supply side) alongside the DVI (demand side) to realize the demand×asset matrix, measuring two-sided ecosystem participation for the DIMER platform.",
+  "previousFeatures": ["001-governance-dimension (paused: convergence tasks T023-T025 queued, uncommitted)"]
+}

@@ -7,6 +7,7 @@
 import { InterviewData, InterviewRecord } from '@/lib/types';
 import { sanitizePII, truncateText } from '@/lib/validation';
 import { MAX_CONVERSATION_HISTORY_SIZE } from '@/lib/constants';
+import { DVI_MODEL_VERSION } from '@/lib/dvi';
 
 export type SubmissionRecord = InterviewRecord;
 
@@ -55,8 +56,14 @@ export function buildSubmissionRecord(data: InterviewData): InterviewRecord {
     technicalComplexity: data.scores.technicalComplexity,
     localizationGap: data.scores.localizationGap,
     uvpResonance: data.scores.uvpResonance,
+    governanceResonance: data.scores.governanceResonance,
     dvi: data.dvi,
+    dviModelVersion: DVI_MODEL_VERSION,
     interpretation: stripNullChars(data.interpretation),
+    assetPossession: data.asset.possession,
+    assetWillingness: data.asset.willingness,
+    acScore: data.acScore,
+    matrixQuadrant: stripNullChars(data.quadrant),
     likelihoodToTry: clean(data.likelihoodToTry),
     firstUsePathway: clean(data.firstUsePathway),
     timeframe: clean(data.timeframe),

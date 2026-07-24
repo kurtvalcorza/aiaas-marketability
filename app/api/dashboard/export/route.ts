@@ -40,7 +40,9 @@ export async function GET(request: NextRequest): Promise<Response> {
              final_route, organization_type, current_work_type, ai_maturity, ai_work,
              main_problem, need_tags, competitor_benchmarked, friction_tags, use_case_tags,
              cost_barrier_score_c, technical_complexity_score_t, localization_gap_score_l,
-             uvp_resonance_score_u, dvi_score, interpretation, likelihood_to_try,
+             uvp_resonance_score_u, governance_resonance_score_g,
+             asset_possession_score, asset_willingness_score, ac_score, matrix_quadrant,
+             dvi_score, dvi_model_version, interpretation, likelihood_to_try,
              first_use_pathway, timeframe, adoption_blockers, contact_consent,
              sanitized_summary, conversation_history,
              enrichment_status, evidence_sentiment, interview_quality,
@@ -48,7 +50,7 @@ export async function GET(request: NextRequest): Promise<Response> {
              quantified_pains::text      AS quantified_pains,
              reconciliation_events::text AS reconciliation_events,
              llm_inferred_cost_c, llm_inferred_technical_t,
-             llm_inferred_localization_l, llm_inferred_uvp_u,
+             llm_inferred_localization_l, llm_inferred_uvp_u, llm_inferred_governance_g,
              llm_inferred_rationale::text AS llm_inferred_rationale,
              suggested_need_tags, suggested_friction_tags, suggested_use_case_tags
       FROM aiaas_market_analysis

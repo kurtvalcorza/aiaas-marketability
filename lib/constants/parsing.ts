@@ -17,9 +17,9 @@ export const INTERVIEW_COMPLETE_MARKER = PARSING.MARKERS.INTERVIEW_COMPLETE;
 export const FIELDS_MARKER = PARSING.MARKERS.FIELDS;
 
 /** Which DVI component a re-rate directive targets. */
-export type RerateComponent = 'cost' | 'technical' | 'localization' | 'uvp';
+export type RerateComponent = 'cost' | 'technical' | 'localization' | 'uvp' | 'governance';
 
 /** Matches a single re-rate directive, e.g. [[RERATE:cost]]. */
-export const RERATE_PATTERN = /\[\[RERATE:(cost|technical|localization|uvp)\]\]/i;
+export const RERATE_PATTERN = /\[\[RERATE:(cost|technical|localization|uvp|governance)\]\]/i;
 /** Global variant for stripping all directives from displayed text. */
-export const RERATE_PATTERN_GLOBAL = /\[\[RERATE:(cost|technical|localization|uvp)\]\]/gi;
+export const RERATE_PATTERN_GLOBAL = /\[\[RERATE:(cost|technical|localization|uvp|governance)\]\]/gi;

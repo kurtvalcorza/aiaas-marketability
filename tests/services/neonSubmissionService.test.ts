@@ -21,7 +21,8 @@ const data: InterviewData = {
   competitors: 'AWS; Azure',
   frictionTags: ['cost', 'data sovereignty'],
   useCaseTags: ['Secure or local inference option'],
-  scores: { costBarrier: 5, technicalComplexity: 2, localizationGap: 5, uvpResonance: 4 },
+  scores: { costBarrier: 5, technicalComplexity: 2, localizationGap: 5, uvpResonance: 4, governanceResonance: 3 },
+  asset: { possession: 4, willingness: 3 }, acScore: 3, quadrant: 'Anchor',
   dvi: 4.5, interpretation: 'Strong demand signal',
   likelihoodToTry: 'Very likely', firstUsePathway: 'Explore datasets', timeframe: 'Within 1-3 months',
   adoptionBlockers: 'No relevant datasets',
@@ -57,8 +58,9 @@ describe('Neon Submission Service', () => {
       'Government AI department', 'Policy analytics', 'Yes, regularly', 'Train AI models',
       'Lower-cost localized inference', 'Localized datasets', 'AWS; Azure', 'cost; data sovereignty',
       'Secure or local inference option',
-      5, 2, 5, 4,
-      4.5, 'Strong demand signal', 'Very likely', 'Explore datasets', 'Within 1-3 months',
+      5, 2, 5, 4, 3,
+      4, 3, 3, 'Anchor',
+      4.5, 'v2', 'Strong demand signal', 'Very likely', 'Explore datasets', 'Within 1-3 months',
       'No relevant datasets', true, 'Jane Cruz', 'jane@agency.gov.ph',
       'Advanced team constrained by cost.', '[]',
     ]);
@@ -68,7 +70,7 @@ describe('Neon Submission Service', () => {
     await submitToNeon({ ...data, organizationType: `Gov${NUL}Dept`, conversationHistory: 'Contact me at user@example.com' });
     const values = mockSql.mock.calls[0].slice(1);
     expect(values[4]).toBe('GovDept'); // organization_type
-    expect(values[27]).toBe('Contact me at [EMAIL_REDACTED]'); // conversation_history
+    expect(values[33]).toBe('Contact me at [EMAIL_REDACTED]'); // conversation_history
   });
 
   it('returns a failure result when the insert throws', async () => {

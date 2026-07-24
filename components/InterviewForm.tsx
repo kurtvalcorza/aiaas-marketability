@@ -1,10 +1,11 @@
 'use client';
 
 /**
- * Structured form phase of the AIaaS DVI instrument. Collects routing, the four
- * 0–5 component self-ratings, tag selections, adoption intent, and contact
- * consent. On submit it hands the raw FormState to the parent, which derives the
- * route, computes the DVI, and transitions to the short chat phase.
+ * Structured form phase of the AIaaS DVI instrument. Collects routing, the five
+ * 0–5 component self-ratings, the two asset & contribution ratings, tag
+ * selections, adoption intent, and contact consent. On submit it hands the raw
+ * FormState to the parent, which derives the route, computes the DVI and the
+ * demand × asset matrix quadrant, and transitions to the short chat phase.
  */
 
 import { useMemo, useState } from 'react';
@@ -14,6 +15,8 @@ import {
   isAdvancedDemand,
   BARRIER_SCALE,
   USEFULNESS_SCALE,
+  EXTENT_SCALE,
+  WILLINGNESS_SCALE,
   ORG_TYPES,
   WORK_TYPES,
   AI_MATURITY,
@@ -24,6 +27,8 @@ import {
   TECH_TAG_OPTIONS,
   LOCAL_TAG_OPTIONS,
   FEATURE_OPTIONS,
+  GOV_TAG_OPTIONS,
+  ASSET_TAG_OPTIONS,
   LIKELIHOOD_OPTIONS,
   FIRST_USE_OPTIONS,
   TIMEFRAME_OPTIONS,
@@ -165,6 +170,9 @@ export function InterviewForm({ onSubmit }: InterviewFormProps) {
     if (form.techRating < 0) m.push({ id: 'q-techRating', label: 'technical rating' });
     if (form.locRating < 0) m.push({ id: 'q-locRating', label: 'localization rating' });
     if (form.uvpRating < 0) m.push({ id: 'q-uvpRating', label: 'AIaaS usefulness rating' });
+    if (form.govRating < 0) m.push({ id: 'q-govRating', label: 'governance rating' });
+    if (form.assetPossession < 0) m.push({ id: 'q-assetPossession', label: 'asset possession rating' });
+    if (form.assetWillingness < 0) m.push({ id: 'q-assetWillingness', label: 'contribution willingness rating' });
     if (!form.likelihood) m.push({ id: 'q-likelihood', label: 'likelihood to try' });
     if (!form.firstUse) m.push({ id: 'q-firstUse', label: 'first-use pathway' });
     if (!form.timeframe) m.push({ id: 'q-timeframe', label: 'timeframe' });
@@ -281,7 +289,28 @@ export function InterviewForm({ onSubmit }: InterviewFormProps) {
         </Question>
       </Section>
 
-      <Section title="H · Adoption intent">
+      <Section title="H · Governance & data sovereignty">
+        <Question id="q-govRating" error={hasError('q-govRating')} label="How useful would strong local governance and data sovereignty — on-shore data, local ownership, and public-sector alignment — be for your team?" required>
+          <Scale labels={USEFULNESS_SCALE} value={form.govRating} onChange={(v) => set('govRating', v)} />
+        </Question>
+        <Question label="Which governance factors matter most? (select all)">
+          <CheckboxGroup options={GOV_TAG_OPTIONS} values={form.govTags} onChange={(v) => set('govTags', v)} />
+        </Question>
+      </Section>
+
+      <Section title="I · Asset & Contribution">
+        <Question id="q-assetPossession" error={hasError('q-assetPossession')} label="Does your team hold reusable AI assets — datasets, models, documentation, or benchmarks — that could be shared with others?" required>
+          <Scale labels={EXTENT_SCALE} value={form.assetPossession} onChange={(v) => set('assetPossession', v)} />
+        </Question>
+        <Question id="q-assetWillingness" error={hasError('q-assetWillingness')} label="Would your team be willing to contribute or share those assets into a governed local platform?" required>
+          <Scale labels={WILLINGNESS_SCALE} value={form.assetWillingness} onChange={(v) => set('assetWillingness', v)} />
+        </Question>
+        <Question label="Which kinds of assets could your team contribute? (select all)">
+          <CheckboxGroup options={ASSET_TAG_OPTIONS} values={form.assetTags} onChange={(v) => set('assetTags', v)} />
+        </Question>
+      </Section>
+
+      <Section title="J · Adoption intent">
         <Question id="q-likelihood" error={hasError('q-likelihood')} label="If the AIaaS platform were available, how likely would your team be to try it?" required>
           <RadioGroup options={LIKELIHOOD_OPTIONS} value={form.likelihood} onChange={(v) => set('likelihood', v)} />
         </Question>
@@ -297,7 +326,7 @@ export function InterviewForm({ onSubmit }: InterviewFormProps) {
       </Section>
 
       {ad && (
-        <Section title="I · Advanced AI use">
+        <Section title="K · Advanced AI use">
           <Question label="What AI-related work does your team currently perform? (select all)">
             <CheckboxGroup options={AI_WORK_OPTIONS} values={form.aiWork} onChange={(v) => set('aiWork', v)} />
           </Question>
@@ -307,7 +336,7 @@ export function InterviewForm({ onSubmit }: InterviewFormProps) {
         </Section>
       )}
 
-      <Section title="J · Contact">
+      <Section title="L · Contact">
         <Question id="q-contact" error={hasError('q-contact')} label="May DOST-NAIRA contact you for follow-up or pilot coordination?" required>
           <RadioGroup
             options={['Yes, I agree to be contacted', 'No, I prefer not to be contacted']}

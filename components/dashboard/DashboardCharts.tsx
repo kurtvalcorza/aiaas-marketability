@@ -78,14 +78,21 @@ export function ScoreBarChart({
   );
 }
 
-/** Vertical bar chart of DVI band counts (Weak → Strong), coloured per band. */
+/**
+ * Vertical bar chart of categorical counts, coloured per category. Defaults to
+ * DVI band colours (Weak → Strong); pass `colors` to recolour for another
+ * categorical axis (e.g. the demand × asset matrix quadrants).
+ */
 export function BandBarChart({
   data,
   height = 240,
+  colors,
 }: {
   data: { band: string; interviews: number }[];
   height?: number;
+  colors?: Record<string, string>;
 }) {
+  const palette = colors ?? BAND_COLORS;
   return (
     <ResponsiveContainer width="100%" height={height}>
       <BarChart data={data} margin={{ top: 20, right: 8, bottom: 4, left: 8 }}>
@@ -97,7 +104,7 @@ export function BandBarChart({
         />
         <Bar dataKey="interviews" radius={[4, 4, 0, 0]} isAnimationActive={false} maxBarSize={64}>
           {data.map((r, i) => (
-            <Cell key={i} fill={BAND_COLORS[r.band] ?? '#6b7280'} />
+            <Cell key={i} fill={palette[r.band] ?? '#6b7280'} />
           ))}
           <LabelList dataKey="interviews" position="top" style={LABEL_STYLE} />
         </Bar>

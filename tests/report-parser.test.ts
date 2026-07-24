@@ -63,6 +63,7 @@ describe('chat parsing', () => {
     it('parses the targeted component', () => {
       expect(parseRerateRequest('please revise [[RERATE:technical]]')).toBe('technical');
       expect(parseRerateRequest('[[RERATE:UVP]]')).toBe('uvp');
+      expect(parseRerateRequest('[[RERATE:governance]]')).toBe('governance');
       expect(parseRerateRequest('no directive')).toBeNull();
     });
     it('strips all directives', () => {
@@ -73,6 +74,7 @@ describe('chat parsing', () => {
       expect(RERATE_FIELD.technical).toBe('technicalComplexity');
       expect(RERATE_FIELD.localization).toBe('localizationGap');
       expect(RERATE_FIELD.uvp).toBe('uvpResonance');
+      expect(RERATE_FIELD.governance).toBe('governanceResonance');
     });
   });
 });

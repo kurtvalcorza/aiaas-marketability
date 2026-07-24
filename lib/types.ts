@@ -8,6 +8,8 @@
  * deterministically in app code from the self-ratings — the model never scores.
  */
 
+import type { Quadrant } from './matrix';
+
 /** Represents a message part in the chat conversation */
 export interface MessagePart {
   type: 'text';
@@ -54,6 +56,8 @@ export interface DVIScores {
   localizationGap: number;
   /** U — usefulness of / resonance with the AIaaS platform's value proposition */
   uvpResonance: number;
+  /** G — resonance with local / sovereign AI governance (data residency, ownership, public-sector fit) */
+  governanceResonance: number;
 }
 
 /**
@@ -87,6 +91,12 @@ export interface InterviewData {
   dvi: number;
   /** Interpretation band derived from dvi */
   interpretation: string;
+  /** Asset & Contribution self-ratings (supply axis) — see lib/matrix.ts */
+  asset: { possession: number; willingness: number };
+  /** AC score = min(possession, willingness), 0.00–5.00 */
+  acScore: number;
+  /** Demand × asset quadrant from (dvi, acScore) */
+  quadrant: Quadrant;
   /** Likelihood to try the AIaaS platform (Q21) */
   likelihoodToTry: string;
   /** Most realistic first-use pathway (Q26) */
@@ -130,8 +140,14 @@ export interface InterviewRecord {
   technicalComplexity: number;
   localizationGap: number;
   uvpResonance: number;
+  governanceResonance: number;
   dvi: number;
+  dviModelVersion: string;
   interpretation: string;
+  assetPossession: number;
+  assetWillingness: number;
+  acScore: number;
+  matrixQuadrant: string;
   likelihoodToTry: string;
   firstUsePathway: string;
   timeframe: string;
