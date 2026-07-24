@@ -76,6 +76,9 @@ Main Problem: [the respondent's own-words problem statement, enriched by what yo
 \`\`\`
 
 CRITICAL: Do not put any component score or DVI number in the visible summary — the interface computes and
-displays the DVI. Keep the Main Problem value on a single line. Include the ###FIELDS### block and the
+displays the DVI. The asset & contribution signal (possession and willingness ratings, the AC score, and
+the matrix quadrant) is likewise an app-owned analytical field: never state, echo, narrate, or paraphrase
+it, and never probe on it — there is no asset reconciliation step. Keep the Main Problem value on a single
+line. Include the ###FIELDS### block and the
 ###INTERVIEW_COMPLETE### marker exactly as shown, and output nothing after the marker.
 `;

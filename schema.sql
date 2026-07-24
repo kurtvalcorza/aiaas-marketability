@@ -114,7 +114,12 @@ ALTER TABLE aiaas_market_analysis
   ADD COLUMN IF NOT EXISTS suggested_friction_tags     TEXT,
   ADD COLUMN IF NOT EXISTS suggested_use_case_tags     TEXT;
 
--- Aggregate demand views for the researcher dashboard (a planned follow-up).
+-- Aggregate demand views for the researcher dashboard.
+-- These DVI aggregates are scoped to `dvi_model_version = 'v2'` (the current
+-- five-component methodology) so a mean/band is never averaged across two
+-- different scoring models. Records stamped with a prior methodology are
+-- excluded from these headline numbers rather than silently blended in; bump
+-- this filter when the DVI methodology is next versioned (Principle 7).
 CREATE OR REPLACE VIEW dvi_by_vector AS
 SELECT
   segment_vector,
@@ -126,16 +131,19 @@ SELECT
   ROUND(AVG(uvp_resonance_score_u), 2)         AS avg_uvp_resonance,
   ROUND(AVG(governance_resonance_score_g), 2)  AS avg_governance_resonance
 FROM aiaas_market_analysis
+WHERE dvi_model_version = 'v2'
 GROUP BY segment_vector;
 
 CREATE OR REPLACE VIEW dvi_by_overlay AS
 SELECT ai_maturity_overlay, COUNT(*) AS interviews, ROUND(AVG(dvi_score), 2) AS avg_dvi
 FROM aiaas_market_analysis
+WHERE dvi_model_version = 'v2'
 GROUP BY ai_maturity_overlay;
 
 CREATE OR REPLACE VIEW dvi_by_route AS
 SELECT final_route, COUNT(*) AS interviews, ROUND(AVG(dvi_score), 2) AS avg_dvi
 FROM aiaas_market_analysis
+WHERE dvi_model_version = 'v2'
 GROUP BY final_route;
 
 -- Overall rollup: one row summarising the whole dataset for the KPI header.
@@ -150,7 +158,8 @@ SELECT
   ROUND(AVG(governance_resonance_score_g), 2)  AS avg_governance_resonance,
   COUNT(*) FILTER (WHERE contact_consent)      AS contact_consented,
   MAX(created_at)                              AS latest_submission
-FROM aiaas_market_analysis;
+FROM aiaas_market_analysis
+WHERE dvi_model_version = 'v2';
 
 -- DVI band distribution (Weak <1.5, Limited 1.5-2.5, Moderate 2.5-3.5, Strong >=3.5).
 -- sort_order keeps the bands in ascending strength for charting; empty bands are
@@ -168,6 +177,7 @@ scored AS (
       ELSE 'Strong'
     END AS band
   FROM aiaas_market_analysis
+  WHERE dvi_model_version = 'v2'
 )
 SELECT b.band, b.sort_order, COUNT(s.band) AS interviews
 FROM bands b
