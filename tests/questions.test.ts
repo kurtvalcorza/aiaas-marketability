@@ -14,6 +14,7 @@ import {
   COST_TAG_OPTIONS,
   LOCAL_TAG_OPTIONS,
   GOV_TAG_OPTIONS,
+  ASSET_TAG_OPTIONS,
   FEATURE_OPTIONS,
   LIKELIHOOD_OPTIONS,
   FIRST_USE_OPTIONS,
@@ -129,6 +130,41 @@ describe('formToInterviewCore', () => {
     const core = formToInterviewCore({ ...sampleForm(), aiMaturity: AI_MATURITY[3] });
     expect(core.overlay).toBe('basic');
     expect(core.aiWork).toBe('');
+  });
+});
+
+describe('asset & contribution axis', () => {
+  it('sets asset, computes the min-gated acScore, and classifies the quadrant', () => {
+    const core = formToInterviewCore({ ...sampleForm(), assetPossession: 4, assetWillingness: 3 });
+    expect(core.asset).toEqual({ possession: 4, willingness: 3 });
+    expect(core.acScore).toBe(3); // min(4, 3)
+    // sampleForm DVI = 4.25 (demand high); ac 3 (asset high) -> Anchor
+    expect(core.quadrant).toBe('Anchor');
+  });
+
+  it('merges assetTags into frictionTags', () => {
+    const core = formToInterviewCore({
+      ...sampleForm(),
+      assetPossession: 3,
+      assetWillingness: 3,
+      assetTags: [ASSET_TAG_OPTIONS[0]],
+    });
+    expect(core.frictionTags).toContain(ASSET_TAG_OPTIONS[0]);
+  });
+
+  it('keeps the asset axis independent of the DVI', () => {
+    const base = formToInterviewCore({ ...sampleForm(), assetPossession: 4, assetWillingness: 4 });
+    // Change ONLY the asset ratings: acScore/quadrant move, dvi/scores do not.
+    const assetChanged = formToInterviewCore({ ...sampleForm(), assetPossession: 1, assetWillingness: 1 });
+    expect(assetChanged.dvi).toBe(base.dvi);
+    expect(assetChanged.scores).toEqual(base.scores);
+    expect(assetChanged.acScore).not.toBe(base.acScore);
+    expect(assetChanged.quadrant).not.toBe(base.quadrant);
+
+    // Change ONLY a demand rating: dvi moves, acScore does not.
+    const demandChanged = formToInterviewCore({ ...sampleForm(), assetPossession: 4, assetWillingness: 4, uvpRating: 0 });
+    expect(demandChanged.dvi).not.toBe(base.dvi);
+    expect(demandChanged.acScore).toBe(base.acScore);
   });
 });
 

@@ -30,6 +30,11 @@ export interface BandRow {
   interviews: number;
 }
 
+export interface MatrixRow {
+  quadrant: string;
+  interviews: number;
+}
+
 export interface WorkbenchDemand {
   interviews: number;
   interested: number;
@@ -43,6 +48,7 @@ export interface DashboardData {
   byRoute: GroupRow[];
   bands: BandRow[];
   workbench: WorkbenchDemand;
+  matrix: MatrixRow[];
 }
 
 /** Postgres NUMERIC / bigint come back as strings over the wire; coerce safely. */
@@ -63,7 +69,7 @@ export async function fetchDashboardData(): Promise<DashboardData> {
 
   const sql = neon(process.env.DATABASE_URL);
 
-  const [overallRows, vectorRows, overlayRows, routeRows, bandRows, workbenchRows] =
+  const [overallRows, vectorRows, overlayRows, routeRows, bandRows, workbenchRows, matrixRows] =
     await Promise.all([
       sql`SELECT interviews, avg_dvi, avg_cost_barrier, avg_technical_complexity,
                  avg_localization_gap, avg_uvp_resonance, avg_governance_resonance,
@@ -74,6 +80,7 @@ export async function fetchDashboardData(): Promise<DashboardData> {
       sql`SELECT final_route AS key, interviews, avg_dvi FROM dvi_by_route ORDER BY final_route`,
       sql`SELECT band, interviews FROM dvi_band_distribution ORDER BY sort_order`,
       sql`SELECT interviews, workbench_interested, workbench_interest_pct FROM workbench_demand`,
+      sql`SELECT quadrant, interviews FROM demand_asset_matrix`,
     ]);
 
   const o = overallRows[0] ?? {};
@@ -108,6 +115,11 @@ export async function fetchDashboardData(): Promise<DashboardData> {
     pct: num(w.workbench_interest_pct),
   };
 
+  const matrix: MatrixRow[] = matrixRows.map((r) => ({
+    quadrant: String(r.quadrant ?? ''),
+    interviews: int(r.interviews),
+  }));
+
   return {
     overall,
     byVector: toGroup(vectorRows),
@@ -115,6 +127,7 @@ export async function fetchDashboardData(): Promise<DashboardData> {
     byRoute: toGroup(routeRows),
     bands,
     workbench,
+    matrix,
   };
 }
 

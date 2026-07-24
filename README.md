@@ -48,9 +48,13 @@ The scale floor is **0** ("not a barrier" / "not useful"), which makes the "Weak
 
 **Interpretation:** Weak 0.00–1.49 · Limited 1.50–2.49 · Moderate 2.50–3.49 · **Strong 3.50–5.00**.
 
+### Demand × Asset matrix
+
+The DVI is the **demand** axis. A second, **independent** axis measures **supply**: the **Asset & Contribution (AC)** score = `min(Possession, Willingness)` (two 0–5 self-ratings, computed in [`lib/matrix.ts`](lib/matrix.ts), which never imports `lib/dvi.ts`). The min-gate means an org scores high only if it both *holds* reusable AI assets and *would share* them. Plotting AC against the DVI with an inclusive **≥ 2.5** cut classifies each respondent — **Anchor** (high demand + high asset), **Consumer** (high demand, low asset), **Contributor** (low demand, high asset), **Peripheral** (low both). The asset fields are NULLABLE and backward-compatible; the DVI is untouched. See [`docs/specs/demand-asset-axis.md`](docs/specs/demand-asset-axis.md).
+
 ## What the form collects
 
-**Every respondent** (form): organization type, current work, AI maturity, what they need, alternatives tried, friction with alternatives, the five DVI 0–5 ratings (each with an optional sub-friction tag picker), likelihood to try, first-use pathway, timeframe, adoption blockers, and a contact-consent choice.
+**Every respondent** (form): organization type, current work, AI maturity, what they need, alternatives tried, friction with alternatives, the five DVI 0–5 ratings (each with an optional sub-friction tag picker), the two **Asset & Contribution** 0–5 ratings (asset possession + contribution willingness, with an optional asset-type tag picker), likelihood to try, first-use pathway, timeframe, adoption blockers, and a contact-consent choice.
 
 **Advanced Demand respondents** additionally answer: their current AI-related work and their most significant remaining pain points.
 

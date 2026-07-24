@@ -36,6 +36,7 @@ export async function submitToNeon(data: InterviewData): Promise<SubmissionResul
         organization_type, current_work_type, ai_maturity, ai_work,
         main_problem, need_tags, competitor_benchmarked, friction_tags, use_case_tags,
         cost_barrier_score_c, technical_complexity_score_t, localization_gap_score_l, uvp_resonance_score_u, governance_resonance_score_g,
+        asset_possession_score, asset_willingness_score, ac_score, matrix_quadrant,
         dvi_score, dvi_model_version, interpretation, likelihood_to_try, first_use_pathway, timeframe, adoption_blockers,
         contact_consent, contact_name, contact_email, sanitized_summary, conversation_history
       ) VALUES (
@@ -43,6 +44,7 @@ export async function submitToNeon(data: InterviewData): Promise<SubmissionResul
         ${r.organizationType}, ${r.currentWorkType}, ${r.aiMaturity}, ${r.aiWork},
         ${r.mainProblem}, ${r.needTags}, ${r.competitors}, ${r.frictionTags}, ${r.useCaseTags},
         ${r.costBarrier}, ${r.technicalComplexity}, ${r.localizationGap}, ${r.uvpResonance}, ${r.governanceResonance},
+        ${r.assetPossession}, ${r.assetWillingness}, ${r.acScore}, ${r.matrixQuadrant},
         ${r.dvi}, ${r.dviModelVersion}, ${r.interpretation}, ${r.likelihoodToTry}, ${r.firstUsePathway}, ${r.timeframe}, ${r.adoptionBlockers},
         ${r.contactConsent}, ${r.contactName}, ${r.contactEmail}, ${r.summary}, ${r.conversationHistory}
       )

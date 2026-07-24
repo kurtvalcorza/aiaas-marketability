@@ -38,6 +38,7 @@ describe('Validation utilities', () => {
       needTags: ['Localized datasets'], competitors: 'AWS; Azure',
       frictionTags: ['cost'], useCaseTags: ['Secure or local inference option'],
       scores: { costBarrier: 5, technicalComplexity: 2, localizationGap: 5, uvpResonance: 4, governanceResonance: 4 },
+      asset: { possession: 4, willingness: 3 }, acScore: 3, quadrant: 'Anchor',
       dvi: 4.5, interpretation: 'Strong demand signal',
       likelihoodToTry: 'Very likely', firstUsePathway: 'Explore datasets', timeframe: 'Immediately',
       adoptionBlockers: 'No relevant datasets',
@@ -86,6 +87,20 @@ describe('Validation utilities', () => {
 
     it('accepts a valid work email', () => {
       expect(() => validateInterviewData({ ...validData, contactConsent: true, contactName: 'Jane', contactEmail: 'jane@agency.gov.ph' })).not.toThrow();
+    });
+
+    it('accepts asset ratings at the 0 and 5 bounds', () => {
+      expect(() => validateInterviewData({ ...validData, asset: { possession: 0, willingness: 0 }, acScore: 0 })).not.toThrow();
+      expect(() => validateInterviewData({ ...validData, asset: { possession: 5, willingness: 5 }, acScore: 5 })).not.toThrow();
+    });
+
+    it('rejects an out-of-range asset rating', () => {
+      expect(() => validateInterviewData({ ...validData, asset: { possession: 6, willingness: 3 } })).toThrow('Validation failed');
+      expect(() => validateInterviewData({ ...validData, asset: { possession: 3, willingness: -1 } })).toThrow('Validation failed');
+    });
+
+    it('rejects a bad matrix quadrant', () => {
+      expect(() => validateInterviewData({ ...validData, quadrant: 'Champion' })).toThrow('Validation failed');
     });
   });
 });

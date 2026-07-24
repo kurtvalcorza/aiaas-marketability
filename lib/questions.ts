@@ -7,6 +7,7 @@
  */
 
 import { computeDVI, interpretDVI } from './dvi';
+import { computeAcScore, classifyQuadrant } from './matrix';
 import { toRoute } from './routes';
 import { DVIScores, InterviewData, Overlay, Segment } from './types';
 
@@ -28,6 +29,19 @@ export const USEFULNESS_SCALE = [
   'Moderately',
   'Very useful',
   'Extremely useful',
+] as const;
+
+/** 0–5 extent scale (asset possession). */
+export const EXTENT_SCALE = ['None', 'Very little', 'A little', 'Some', 'A lot', 'Extensive'] as const;
+
+/** 0–5 willingness scale (contribution). */
+export const WILLINGNESS_SCALE = [
+  'Not willing',
+  'Slightly',
+  'Somewhat',
+  'Moderately',
+  'Very willing',
+  'Fully willing',
 ] as const;
 
 export const ORG_TYPES = [
@@ -137,6 +151,16 @@ export const GOV_TAG_OPTIONS = [
   'Avoiding vendor lock-in',
   'Auditability & transparency',
   'Local accountability / support',
+] as const;
+
+/** Asset-type tags (supply axis). Evidence only — never feed the AC score. */
+export const ASSET_TAG_OPTIONS = [
+  'Localized datasets we built',
+  'Trained or fine-tuned models',
+  'Annotated or benchmark data',
+  'Technical documentation',
+  'Code, pipelines, or tools',
+  'Nothing shareable yet',
 ] as const;
 
 export const FEATURE_OPTIONS = [
@@ -250,6 +274,9 @@ export interface FormState {
   featureTags: string[];
   govRating: number;
   govTags: string[];
+  assetPossession: number;
+  assetWillingness: number;
+  assetTags: string[];
   likelihood: string;
   firstUse: string;
   timeframe: string;
@@ -272,6 +299,7 @@ export function emptyForm(): FormState {
     costRating: -1, costTags: [], techRating: -1, techTags: [],
     locRating: -1, locTags: [], uvpRating: -1, featureTags: [],
     govRating: -1, govTags: [],
+    assetPossession: -1, assetWillingness: -1, assetTags: [],
     likelihood: '', firstUse: '', timeframe: '', blockers: [],
     aiWork: [], adPain: [],
     contactAnswered: false, contactConsent: false, contactName: '', contactEmail: '',
@@ -322,6 +350,7 @@ export function buildFormContext(form: FormState): string {
     `Localization rating: ${form.locRating}/5. Localization gaps ticked: ${list(form.locTags)}.`,
     `UVP usefulness rating: ${form.uvpRating}/5. Valued features: ${list(form.featureTags)}.`,
     `Governance resonance rating: ${form.govRating}/5. Governance factors ticked: ${list(form.govTags)}.`,
+    `Asset possession rating: ${form.assetPossession}/5. Contribution willingness rating: ${form.assetWillingness}/5. Asset types: ${list(form.assetTags)}.`,
     `Competitors tried: ${list(form.competitors)}. General friction: ${list(form.frictionTags)}.`,
     `Needs: ${list(form.needTags)}. Likelihood: ${form.likelihood}. First use: ${form.firstUse}. Timeframe: ${form.timeframe}. Blockers: ${list(form.blockers)}.`,
   ];
@@ -348,6 +377,11 @@ export function formToInterviewCore(form: FormState): InterviewCore {
   };
   const dvi = computeDVI(scores, overlay);
 
+  // Asset & Contribution axis (supply side) — computed independently of the DVI.
+  const asset = { possession: form.assetPossession, willingness: form.assetWillingness };
+  const acScore = computeAcScore(asset.possession, asset.willingness);
+  const quadrant = classifyQuadrant(dvi, acScore);
+
   // Component sub-friction and AD pain are merged into the friction tag list.
   const friction = dedupe([
     ...form.frictionTags,
@@ -355,6 +389,7 @@ export function formToInterviewCore(form: FormState): InterviewCore {
     ...form.techTags,
     ...form.locTags,
     ...form.govTags,
+    ...form.assetTags,
     ...(overlay === 'AD' ? form.adPain : []),
   ]);
 
@@ -373,6 +408,9 @@ export function formToInterviewCore(form: FormState): InterviewCore {
     scores,
     dvi,
     interpretation: interpretDVI(dvi),
+    asset,
+    acScore,
+    quadrant,
     likelihoodToTry: form.likelihood,
     firstUsePathway: form.firstUse,
     timeframe: form.timeframe,

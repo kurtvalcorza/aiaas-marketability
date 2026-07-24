@@ -30,6 +30,12 @@ CREATE TABLE IF NOT EXISTS aiaas_market_analysis (
   -- Weighted Demand Viability Index, 0.00-5.00 (AD routes use AD-adjusted weights)
   dvi_score                     NUMERIC(3,2) NOT NULL CHECK (dvi_score BETWEEN 0 AND 5),
   dvi_model_version             TEXT         NOT NULL DEFAULT 'v1',  -- 'v1'=4 components; 'v2'=5 (adds G)
+  -- Asset & Contribution axis (supply side; INDEPENDENT of the DVI). NULLABLE:
+  -- pre-feature rows have no asset axis (NULL = not collected). See lib/matrix.ts.
+  asset_possession_score        NUMERIC(3,1) CHECK (asset_possession_score BETWEEN 0 AND 5),
+  asset_willingness_score       NUMERIC(3,1) CHECK (asset_willingness_score BETWEEN 0 AND 5),
+  ac_score                      NUMERIC(3,2) CHECK (ac_score BETWEEN 0 AND 5),  -- min(possession, willingness)
+  matrix_quadrant               TEXT CHECK (matrix_quadrant IN ('Anchor','Consumer','Contributor','Peripheral')),
   interpretation                TEXT,
   likelihood_to_try             TEXT,
   first_use_pathway             TEXT,
@@ -70,6 +76,14 @@ CREATE TABLE IF NOT EXISTS aiaas_market_analysis (
 -- already get these from the CREATE TABLE above; this block upgrades a table
 -- created before the enrichment pass without dropping it.
 ALTER TABLE aiaas_market_analysis
+  ADD COLUMN IF NOT EXISTS asset_possession_score  NUMERIC(3,1)
+    CHECK (asset_possession_score BETWEEN 0 AND 5),
+  ADD COLUMN IF NOT EXISTS asset_willingness_score NUMERIC(3,1)
+    CHECK (asset_willingness_score BETWEEN 0 AND 5),
+  ADD COLUMN IF NOT EXISTS ac_score                NUMERIC(3,2)
+    CHECK (ac_score BETWEEN 0 AND 5),
+  ADD COLUMN IF NOT EXISTS matrix_quadrant         TEXT
+    CHECK (matrix_quadrant IN ('Anchor','Consumer','Contributor','Peripheral')),
   ADD COLUMN IF NOT EXISTS governance_resonance_score_g NUMERIC(3,1)
     CHECK (governance_resonance_score_g BETWEEN 0 AND 5),
   ADD COLUMN IF NOT EXISTS dvi_model_version            TEXT NOT NULL DEFAULT 'v1',
@@ -222,3 +236,21 @@ CREATE OR REPLACE VIEW enrichment_coverage AS
 SELECT enrichment_status, COUNT(*) AS interviews
 FROM aiaas_market_analysis
 GROUP BY enrichment_status;
+
+-- ── Demand × Asset matrix (feature 002) ──────────────────────────────────────
+-- Quadrant counts across respondents who have the asset axis (ac_score set).
+-- Anchor = high demand + high asset (seed + consume); Consumer = high demand,
+-- low asset; Contributor = low demand, high asset; Peripheral = low + low.
+CREATE OR REPLACE VIEW demand_asset_matrix AS
+SELECT matrix_quadrant AS quadrant, COUNT(*) AS interviews
+FROM aiaas_market_analysis
+WHERE matrix_quadrant IS NOT NULL
+GROUP BY matrix_quadrant;
+
+-- Matrix quadrant distribution per final route (RR/DD × basic/AD).
+CREATE OR REPLACE VIEW matrix_by_route AS
+SELECT final_route, matrix_quadrant AS quadrant, COUNT(*) AS interviews
+FROM aiaas_market_analysis
+WHERE matrix_quadrant IS NOT NULL
+GROUP BY final_route, matrix_quadrant
+ORDER BY final_route, matrix_quadrant;

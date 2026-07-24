@@ -66,7 +66,8 @@ describe('fetchDashboardData', () => {
       .mockResolvedValueOnce([]) // dvi_by_overlay
       .mockResolvedValueOnce([]) // dvi_by_route
       .mockResolvedValueOnce([]) // dvi_band_distribution
-      .mockResolvedValueOnce([{ interviews: 10, workbench_interested: 2, workbench_interest_pct: '20.0' }]);
+      .mockResolvedValueOnce([{ interviews: 10, workbench_interested: 2, workbench_interest_pct: '20.0' }])
+      .mockResolvedValueOnce([]); // demand_asset_matrix
 
     const data = await fetchDashboardData();
     expect(data.overall.avgGovernanceResonance).toBe(3.4);

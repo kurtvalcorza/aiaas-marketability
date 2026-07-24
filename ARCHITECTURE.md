@@ -75,6 +75,19 @@ The resulting DVI (`0.00`–`5.00`) maps to one of four interpretation bands (`i
 | Limited demand signal | 1.5 – 2.49 |
 | Weak demand signal | < 1.5 |
 
+### The Demand × Asset matrix (supply axis)
+
+The DVI measures **demand** ("would you use it"). A second, **independent** axis measures **supply** — whether a respondent could seed the ecosystem. The **Asset & Contribution (AC)** score is `min(Possession, Willingness)`, each a 0.0–5.0 form self-rating clamped to `[0,5]`, computed deterministically in `lib/matrix.ts` (which **must not import `lib/dvi.ts`** — the axes are independent; asset answers never move the DVI and vice versa). The **min-gate** is deliberate: an org supplies content only if it both *holds* reusable AI assets and *will* share them.
+
+Plotting AC against the DVI with an inclusive **≥ 2.5** cut on each axis yields four quadrants (`classifyQuadrant`):
+
+| | Asset low (< 2.5) | Asset high (≥ 2.5) |
+| --- | --- | --- |
+| **Demand high (DVI ≥ 2.5)** | Consumer | Anchor |
+| **Demand low (DVI < 2.5)** | Peripheral | Contributor |
+
+`(2.5, 2.5)` → **Anchor**. The four asset columns are **NULLABLE** and backward-compatible (pre-feature records carry NULL = "not collected", excluded from matrix counts); no record is recomputed and the DVI is untouched. See `specs/002-demand-asset-axis/` and `docs/specs/demand-asset-axis.md`.
+
 ### Respondent-facing vs. internal fields (FR-064)
 
 The model's final message contains a **visible respondent summary** (heading `## Your AIaaS Demand Summary`), then a `###FIELDS###` block (a single line, `Main Problem: ...`), then a `###INTERVIEW_COMPLETE###` marker. `lib/report-parser.ts` shows the respondent only the visible summary and strips the FIELDS block, the marker, and any `[[RERATE:x]]` directives. The five component scores and the DVI are computed and displayed by the app — never emitted or narrated by the model — and contact details never appear in the chat UI.
